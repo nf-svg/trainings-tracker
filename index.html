@@ -1,0 +1,3657 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainings-Tracker</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Trainings-Tracker">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #f0f3f7 100%); min-height: 100vh; }
+.container { max-width: 1400px; margin: 0 auto; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 3rem 2rem; color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
+.header-title { font-size: 32px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
+.header-subtitle { font-size: 14px; opacity: 0.9; margin: 0.5rem 0 0 0; font-weight: 400; }
+
+.content { padding: 2rem; }
+
+/* Sektion */
+.section { margin-bottom: 2.5rem; }
+.section-title { font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+.section-title::before { content: ''; width: 3px; height: 16px; background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); border-radius: 2px; }
+
+/* Cards & Input */
+.card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); border: 1px solid #f0f0f0; margin-bottom: 1.5rem; transition: all 0.2s; }
+.card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+.card input, .card select { padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; background: white; color: #1f2937; margin-bottom: 0.75rem; width: 100%; transition: all 0.2s; }
+.card input:focus, .card select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: #f8faff; }
+
+.input-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 1rem; }
+.input-group { display: flex; flex-direction: column; }
+.input-group label { font-size: 12px; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.3px; }
+.input-group input, .input-group select { padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+
+.button-group { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
+button { padding: 11px 20px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: white; transition: all 0.2s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); }
+button:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4); }
+button:active { transform: translateY(0); }
+button.secondary { background: #6b7280; box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2); }
+button.secondary:hover { background: #4b5563; box-shadow: 0 4px 8px rgba(75, 85, 99, 0.3); }
+
+/* Tabelle */
+.table-wrapper { border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); border: 1px solid #f0f0f0; background: white; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: linear-gradient(135deg, #f8faff 0%, #f3f7ff 100%); padding: 14px 16px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
+td { padding: 13px 16px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+tbody tr:hover { background: #f9faff; }
+tbody tr:last-child td { border-bottom: none; }
+
+/* Badges */
+.sport-badge { display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+.badge-joggen { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1e40af; border: 1px solid #93c5fd; }
+.badge-rower { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #065f46; border: 1px solid #86efac; }
+.badge-assaultbike { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #fcd34d; }
+.badge-treppensteigen { background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #9d174d; border: 1px solid #f9a8d4; }
+.badge-laufband { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #075985; border: 1px solid #7dd3fc; }
+
+/* Buttons */
+.delete-btn, .edit-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 6px 10px; transition: all 0.2s; color: #9ca3af; border-radius: 6px; }
+.edit-btn { margin-right: 0.5rem; }
+.edit-btn:hover { color: #3b82f6; background: #eff6ff; }
+.delete-btn:hover { color: #ef4444; background: #fef2f2; }
+
+/* Overview Boxes */
+.overview-boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+.overview-box { background: white; border: 1px solid #f0f0f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); transition: all 0.2s; }
+.overview-box:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+.overview-box-title { font-size: 12px; color: #4b5563; font-weight: 700; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.overview-box-content { display: flex; flex-direction: column; gap: 0.75rem; }
+.overview-box-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; }
+.overview-box-label { color: #6b7280; font-size: 12px; font-weight: 500; }
+.overview-box-value { font-weight: 700; color: #1f2937; font-size: 14px; }
+
+.today-highlight { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 4px solid #f59e0b; }
+.today-highlight .overview-box-title { color: #92400e; }
+
+/* Sports Grid */
+.sports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+.sport-card { background: white; border-radius: 12px; padding: 1.75rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); border-left: 5px solid #3b82f6; transition: all 0.2s; border: 1px solid #f0f0f0; }
+.sport-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+.sport-card.joggen { border-left-color: #3b82f6; background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%); }
+.sport-card.rower { border-left-color: #10b981; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); }
+.sport-card.bike { border-left-color: #f59e0b; background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%); }
+.sport-card.kraft { border-left-color: #8b5cf6; background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); }
+.sport-card-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 2px solid #f3f4f6; }
+.sport-card-icon { font-size: 28px; }
+.sport-card-name { font-size: 16px; font-weight: 700; color: #1f2937; }
+.sport-card-row { display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 13px; }
+.sport-card-label { color: #6b7280; font-weight: 500; }
+.sport-card-value { font-weight: 700; color: #1f2937; }
+
+/* Records */
+.records-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+.record-card { background: white; border-radius: 12px; padding: 1.75rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); border-top: 4px solid #3b82f6; transition: all 0.2s; border: 1px solid #f0f0f0; }
+.record-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+.record-card-title { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #f3f4f6; }
+.record-item { display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 12px; }
+.record-label { color: #6b7280; font-weight: 500; }
+.record-value { font-weight: 700; color: #1f2937; }
+.record-icon { margin-right: 0.5rem; }
+
+/* Modal */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+.modal-content { background-color: white; margin: 5% auto; padding: 2.5rem; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); }
+.modal-header { font-size: 18px; font-weight: 700; margin-bottom: 1.5rem; color: #1f2937; }
+.modal-close { color: #9ca3af; float: right; font-size: 24px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+.modal-close:hover { color: #ef4444; transform: rotate(90deg); }
+
+/* Main Wrapper */
+.main-wrapper { display: flex; gap: 2rem; }
+.sidebar { width: 300px; flex-shrink: 0; }
+.main-content { flex: 1; }
+
+/* Week Box */
+.week-box { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15); }
+.week-box-title { font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+.week-box-dates { font-size: 14px; font-weight: 700; color: #1f2937; }
+
+/* Training Plan */
+.training-plan { margin-bottom: 2rem; }
+.training-plan-title { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 1.25rem; }
+.plan-day-box { background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 1.25rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+.plan-day-box:hover { border-color: #3b82f6; background: #f8faff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
+.plan-day-box.active { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-color: #3b82f6; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2); }
+.plan-day-box.done { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-color: #10b981; }
+.plan-day-box.skip { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-color: #ef4444; }
+.plan-day-box.sick { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-color: #9ca3af; }
+.plan-status-btn.sick { background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%); color: #374151; border-color: #9ca3af; }
+.plan-day-name { font-size: 13px; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem; }
+.plan-day-info { font-size: 12px; color: #6b7280; margin-bottom: 0.5rem; line-height: 1.4; }
+.plan-intensity { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+.intensity-hoch { background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); color: #991b1b; border: 1px solid #f87171; }
+.intensity-mittel { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #92400e; border: 1px solid #fcd34d; }
+.intensity-niedrig { background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%); color: #065f46; border: 1px solid #6ee7b7; }
+
+.plan-details { background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 1.75rem; margin-top: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }
+.plan-details-title { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 1.25rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem; }
+.plan-section { margin-bottom: 1rem; }
+.plan-section-label { font-size: 11px; color: #4b5563; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+.plan-section-content { font-size: 13px; color: #374151; line-height: 1.6; }
+
+/* Mahlzeit-Auswahl */
+.meal-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 8px; margin-bottom: 0.35rem; cursor: pointer; border: 1.5px solid #e5e7eb; background: white; transition: all 0.2s; font-size: 12px; color: #374151; }
+.meal-item:hover { border-color: #3b82f6; background: #f8faff; }
+.meal-item.selected { border-color: #10b981; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #065f46; font-weight: 600; }
+.meal-item input[type=checkbox] { width: 14px; height: 14px; accent-color: #10b981; cursor: pointer; }
+.meal-kcal { margin-left: auto; font-size: 11px; color: #9ca3af; font-weight: 500; }
+.meal-item.selected .meal-kcal { color: #065f46; }
+.meal-stars { font-size: 10px; margin-left: 0.25rem; }
+.nutrition-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; border-top: 2px solid #f3f4f6; padding-top: 1.25rem; }
+.week-meal-box { background: #f9fafb; border-radius: 10px; padding: 1rem; border: 1px solid #e5e7eb; }
+.week-meal-title { font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+.week-meal-row { display: flex; justify-content: space-between; font-size: 11px; padding: 0.35rem 0; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.week-meal-row:last-child { border-bottom: none; }
+.week-meal-day { color: #6b7280; font-weight: 600; min-width: 70px; }
+.week-meal-food { color: #1f2937; }
+
+.plan-status-buttons { display: flex; gap: 10px; margin-top: 1.5rem; }
+.plan-status-btn { flex: 1; padding: 10px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; background: white; color: #6b7280; transition: all 0.2s; }
+.plan-status-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+.plan-status-btn.done { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #065f46; border-color: #10b981; }
+.plan-status-btn.skip { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; border-color: #ef4444; }
+.plan-status-btn.reset { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
+
+/* Search */
+.search-box { background: white; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+.search-box input { width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; transition: all 0.2s; }
+.search-box input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: #f8faff; }
+
+/* Export Buttons */
+.export-buttons { display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.export-buttons button { padding: 11px 18px; font-size: 12px; flex: 1; min-width: 180px; }
+
+/* Pagination */
+.pagination { display: flex; gap: 10px; margin-top: 1.5rem; justify-content: center; align-items: center; }
+.pagination button { padding: 10px 14px; background: white; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: #4b5563; transition: all 0.2s; }
+.pagination button:hover { border-color: #3b82f6; color: #3b82f6; background: #f8faff; }
+.pagination button.active { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-color: #3b82f6; }
+.pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+.pagination-info { font-size: 12px; color: #4b5563; margin: 0 1.5rem; font-weight: 600; }
+
+/* Weight Tracking */
+.weight-box { background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
+.weight-box-title { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 1rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.75rem; }
+.weight-input-group { margin-bottom: 1rem; }
+.weight-input-group label { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; display: block; }
+.weight-input-group input { width: 100%; padding: 10px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+.weight-input-group input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.weight-button { width: 100%; padding: 10px 16px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: white; transition: all 0.2s; }
+.weight-button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+.weight-comparison { font-size: 12px; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f3f4f6; }
+.weight-comparison-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+.weight-comparison-label { color: #6b7280; }
+.weight-comparison-value { font-weight: 600; color: #1f2937; }
+.weight-gain { color: #ef4444; }
+.weight-loss { color: #10b981; }
+
+@media (max-width: 1024px) {
+  .main-wrapper { flex-direction: column; }
+  .sidebar { width: 100%; }
+  .overview-boxes { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  /* Layout */
+  body { padding-bottom: 80px; }
+  .header { padding: 1rem; }
+  .header-title { font-size: 20px; }
+  .header-subtitle { font-size: 12px; }
+  .content { padding: 0.75rem; }
+  .card { padding: 1rem; }
+  .section { margin-bottom: 1.5rem; }
+
+  /* Inputs größer für Touch */
+  .input-group input, .input-group select,
+  .card input, .card select {
+    font-size: 16px !important; /* verhindert iOS zoom */
+    padding: 13px 12px;
+    min-height: 48px;
+  }
+  .input-group label { font-size: 13px; }
+  .input-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-row .input-group:first-child { grid-column: 1 / -1; }
+
+  /* Buttons */
+  button { min-height: 48px; font-size: 14px; padding: 12px 16px; }
+  .button-group { flex-direction: column; }
+  .button-group button { width: 100%; }
+  .delete-btn, .edit-btn { min-height: 40px; min-width: 40px; font-size: 18px; }
+
+  /* Grid */
+  .overview-boxes { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .overview-box { padding: 1rem; }
+  .overview-box-value { font-size: 16px; }
+  .sports-grid { grid-template-columns: 1fr; }
+  .records-grid { grid-template-columns: 1fr; }
+
+  /* Tabelle → Karten auf Mobile */
+  .table-wrapper { border-radius: 8px; overflow: visible; box-shadow: none; border: none; background: transparent; }
+  table thead { display: none; }
+  table, tbody, tr, td { display: block; width: 100%; }
+  tbody tr {
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #f0f0f0;
+    position: relative;
+  }
+  tbody tr:hover { background: white; }
+  td { padding: 4px 0; border: none; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    min-width: 90px;
+  }
+  td:empty { display: none; }
+  td:last-child { justify-content: flex-end; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; }
+  td:last-child:before { display: none; }
+
+  /* Modal fullscreen */
+  .modal-content {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    overflow-y: auto;
+    padding: 1.5rem 1rem;
+  }
+
+  /* Sidebar */
+  .sidebar { margin-bottom: 0; }
+  .plan-day-box { padding: 0.875rem; }
+  .plan-status-buttons { flex-direction: row; }
+  .plan-status-btn { padding: 10px 8px; font-size: 11px; min-height: 44px; }
+
+  /* Wochenbox */
+  .week-box { padding: 1rem; margin-bottom: 1rem; }
+  .weight-box { padding: 1rem; }
+
+  /* Bottom Nav */
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    z-index: 999;
+    height: 64px;
+  }
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 8px 4px;
+    transition: all 0.2s;
+    min-height: unset;
+    box-shadow: none;
+    transform: none !important;
+  }
+  .mobile-nav-btn:hover { color: #3b82f6; background: #f8faff; }
+  .mobile-nav-btn.active { color: #3b82f6; }
+  .mobile-nav-btn span:first-child { font-size: 20px; }
+
+  /* FAB Button */
+  .fab-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 1rem;
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none; border-radius: 50%;
+    color: white; font-size: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.5);
+    z-index: 998;
+    transition: all 0.2s;
+    min-height: unset;
+  }
+  .fab-btn:hover { transform: scale(1.1) !important; box-shadow: 0 6px 20px rgba(59,130,246,0.6); }
+
+  /* Sections ausblenden per Nav */
+  .section.hidden-mobile { display: none; }
+  .section.active-mobile { display: block; }
+
+  /* Nutrition Grid */
+  .nutrition-grid { grid-template-columns: 1fr; }
+
+  /* Snack Box */
+  #snackInfoBox { font-size: 12px; }
+}
+
+/* Nur Desktop: FAB + Bottom Nav ausblenden */
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+  .fab-btn { display: none; }
+}
+    </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="header-title">⚡ Trainings-Tracker</h1>
+    <p class="header-subtitle">Verfolge deine Trainingseinträge und Fortschritte</p>
+    <div id="debugInfo" style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 12px; color: #e0e7ff;">
+      <span id="debugStatus">🔍 Status wird geprüft...</span>
+    </div>
+    <div style="margin-top: 0.5rem; font-size: 12px; color: #e0e7ff; display: flex; align-items: center; gap: 0.5rem;">
+      <span>☁️ Sync:</span>
+      <span id="syncStatus" style="font-weight: 600;">Initialisiere...</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="main-wrapper">
+      <div class="sidebar">
+        <div class="week-box">
+          <div class="week-box-title">📅 Aktuelle Woche</div>
+          <div class="week-box-dates" id="weekRange">—</div>
+        </div>
+
+        <!-- Wetter Bielefeld -->
+        <div class="weight-box" style="border-color: #3b82f6; margin-bottom: 1.5rem;" id="wetterBox">
+          <div class="weight-box-title" style="color: #1e40af; border-color: #bfdbfe;">🌤️ Wetter Bielefeld</div>
+          <div id="wetterContent" style="font-size: 13px; color: #374151;">
+            <div style="text-align: center; color: #9ca3af; padding: 0.5rem;">Wird geladen...</div>
+          </div>
+          <button onclick="loadWetter()" style="margin-top: 0.75rem; width: 100%; padding: 8px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: white;">🔄 Aktualisieren</button>
+        </div>
+
+        <!-- Home Office Tage -->
+        <div class="weight-box" style="border-color: #10b981;">
+          <div class="weight-box-title" style="color: #065f46; border-color: #bbf7d0;">🏠 Home Office Tage</div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="ho-montag" onchange="updateTrainingPlan()" />
+              Montag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="ho-dienstag" onchange="updateTrainingPlan()" />
+              Dienstag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="ho-mittwoch" onchange="updateTrainingPlan()" />
+              Mittwoch
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="ho-donnerstag" onchange="updateTrainingPlan()" />
+              Donnerstag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="ho-freitag" onchange="updateTrainingPlan()" />
+              Freitag
+            </label>
+            <button onclick="resetHODays()" style="padding: 6px 10px; font-size: 12px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">Reset HO</button>
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; border-left: 3px solid #f59e0b;">
+            <p style="margin: 0 0 0.75rem 0; font-size: 12px; font-weight: 600; color: #92400e;">🎉 Feiertag/Ruhetag</p>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="holiday-montag" onchange="updateTrainingPlan()" />
+              Montag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="holiday-dienstag" onchange="updateTrainingPlan()" />
+              Dienstag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="holiday-mittwoch" onchange="updateTrainingPlan()" />
+              Mittwoch
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="holiday-donnerstag" onchange="updateTrainingPlan()" />
+              Donnerstag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="holiday-freitag" onchange="updateTrainingPlan()" />
+              Freitag
+            </label>
+            <button onclick="resetHolidayDays()" style="margin-top: 0.5rem; padding: 6px 10px; font-size: 12px; background: #f59e0b; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">Reset Feiertage</button>
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; border-left: 3px solid #9ca3af;">
+            <p style="margin: 0 0 0.75rem 0; font-size: 12px; font-weight: 600; color: #374151;">🤒 Krankheitstag</p>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="sick-montag" onchange="updateSickDays()" />
+              Montag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="sick-dienstag" onchange="updateSickDays()" />
+              Dienstag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="sick-mittwoch" onchange="updateSickDays()" />
+              Mittwoch
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="sick-donnerstag" onchange="updateSickDays()" />
+              Donnerstag
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; color: #1f2937;">
+              <input type="checkbox" id="sick-freitag" onchange="updateSickDays()" />
+              Freitag
+            </label>
+            <button onclick="resetSickDays()" style="margin-top: 0.5rem; padding: 6px 10px; font-size: 12px; background: #6b7280; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">Reset Krankheit</button>
+          </div>
+          
+          <div id="hoPlanUpdate" style="font-size: 11px; color: #6b7280; background: #f9fafb; padding: 0.75rem; border-radius: 6px; line-height: 1.5;"></div>
+        </div>
+
+        <div class="training-plan" style="margin-top: 2rem;">
+          <div class="training-plan-title">Trainingsplan</div>
+          <div id="planDaysContainer"></div>
+        </div>
+
+        <div class="plan-details" id="planDetailsContainer" style="display: none;"></div>
+        
+        <!-- Gewichts-Tracking -->
+        <div class="weight-box">
+          <div class="weight-box-title">⚖️ Gewicht</div>
+          
+          <div class="weight-input-group">
+            <label>Datum</label>
+            <input type="date" id="weight-datum" />
+          </div>
+          
+          <div class="weight-input-group">
+            <label>Gewicht (kg)</label>
+            <input type="number" id="weight-kg" step="0.1" placeholder="z.B. 85.5" />
+          </div>
+          
+          <button class="weight-button" onclick="addWeightEntry()">+ Gewicht hinzufügen</button>
+          
+          <div class="weight-comparison" id="weightComparison"></div>
+
+          <!-- Verlauf -->
+          <div id="weightHistory" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div class="weight-box" style="margin-top: 1.5rem;">
+          <div class="weight-box-title">📊 Körperfett</div>
+          
+          <div class="weight-input-group">
+            <label>Datum</label>
+            <input type="date" id="bodyfat-datum" />
+          </div>
+          
+          <div class="weight-input-group">
+            <label>Körperfett (%)</label>
+            <input type="number" id="bodyfat-percent" step="0.1" placeholder="z.B. 24.5" />
+          </div>
+          
+          <button class="weight-button" onclick="addBodyFatEntry()">+ Körperfett hinzufügen</button>
+          
+          <div class="weight-comparison" id="bodyFatComparison"></div>
+
+          <!-- Verlauf -->
+          <div id="bodyFatHistory" style="margin-top: 1rem;"></div>
+        </div>
+      </div>
+
+
+      <div class="main-content">
+        <div class="section">
+          <div class="section-title">Neuer Trainingseintrag</div>
+          <div class="card">
+            <div class="input-row">
+              <div class="input-group">
+                <label>Datum (oder "h")</label>
+                <input type="text" id="datum" placeholder="TT.MM.JJJJ oder h" />
+              </div>
+              <div class="input-group">
+                <label>Sportart</label>
+                <select id="sportart">
+                  <option value="">-- Wählen --</option>
+                  <option value="Joggen">Joggen</option>
+                  <option value="Treppensteigen">Treppensteigen</option>
+                  <option value="Laufband">Laufband</option>
+                  <option value="Rower">Rower</option>
+                  <option value="Assault Bike">Assault Bike</option>
+                  <option value="Fitness Training">Fitness Training</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Distanz (km)</label>
+                <input type="number" id="distanz" step="0.1" placeholder="z.B. 5,5" />
+              </div>
+              <div class="input-group">
+                <label>Trainingsabschnitt</label>
+                <select id="bemerkung">
+                  <option value="">-- Wählen --</option>
+                  <option value="Warmup">Warmup</option>
+                  <option value="Hauptteil">Hauptteil</option>
+                  <option value="Cooldown">Cooldown</option>
+                  <option value="Regeneration">Regeneration</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-row">
+              <div class="input-group">
+                <label>Minuten</label>
+                <input type="number" id="zeit-minuten" min="0" placeholder="z.B. 35" />
+              </div>
+              <div class="input-group">
+                <label>Sekunden</label>
+                <input type="number" id="zeit-sekunden" min="0" max="59" placeholder="z.B. 30" />
+              </div>
+              <div class="input-group">
+                <label>Puls von (bpm)</label>
+                <input type="number" id="puls-von" placeholder="z.B. 120" />
+              </div>
+              <div class="input-group">
+                <label>Puls bis (bpm)</label>
+                <input type="number" id="puls-bis" placeholder="z.B. 160" />
+              </div>
+              <div class="input-group">
+                <label>Ø Puls dieses Trainings (bpm)</label>
+                <input type="number" id="puls-durchschnitt" placeholder="z.B. 140" />
+              </div>
+            </div>
+
+            <div class="input-row">
+              <div class="input-group">
+                <label>Aktivitätskalorien</label>
+                <input type="number" id="aktivitaets-kalorien" placeholder="z.B. 250" onchange="calculateGesamtkalorien()" onkeyup="calculateGesamtkalorien()" />
+              </div>
+              <div class="input-group">
+                <label>Gesamtkalorien</label>
+                <input type="number" id="gesamt-kalorien" placeholder="z.B. 550" />
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button onclick="addEntry()">+ Eintrag hinzufügen</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Detaillierte Analyse</div>
+          <div class="overview-boxes" id="analysisBoxes"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Trainingseinträge</div>
+          <div class="export-buttons">
+            <button onclick="exportData()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">⬇️ Daten exportieren</button>
+            <button onclick="document.getElementById('importFile').click()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">⬆️ Daten importieren</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+          </div>
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Nach Sportart oder Beschreibung suchen..." onkeyup="filterTable()">
+          </div>
+          <div class="table-wrapper">
+            <table id="trainingsTable">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Sportart</th>
+                  <th>Beschreibung</th>
+                  <th>Distanz</th>
+                  <th>Zeit</th>
+                  <th>Tempo</th>
+                  <th>Puls</th>
+                  <th>Ø Puls</th>
+                  <th>Aktivität</th>
+                  <th>Gesamt</th>
+                  <th>Bewertung</th>
+                  <th style="width: 50px;"></th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr>
+                  <td colspan="9" style="text-align: center; padding: 2rem; color: #9ca3af;">
+                    Noch keine Einträge vorhanden
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="paginationContainer" style="display: none;">
+            <button onclick="previousPage()" id="prevBtn">← Zurück</button>
+            <div class="pagination-info">
+              Seite <span id="currentPage">1</span> von <span id="totalPages">1</span>
+            </div>
+            <button onclick="nextPage()" id="nextBtn">Weiter →</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Gesamtwerte nach Sportart</div>
+          <div class="sports-grid" id="sportsOverview"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Zeitbasierte Rekorde (Tag · Woche · Monat)</div>
+          <div class="records-grid" id="timeBasedRecordsContainer"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Bestzeiten & Rekorde</div>
+          <div class="records-grid" id="recordsContainer"></div>
+        </div>
+
+        <!-- Ernährungsplan Container - erscheint wenn Tag ausgewählt -->
+        <div id="nutritionContainer" style="display: none;"></div>
+
+        <!-- Snack Info Box -->
+        <div class="section">
+          <div class="section-title">🍎 Erlaubte Snacks – jederzeit</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            
+            <div class="card" style="margin: 0; padding: 1.25rem;">
+              <div style="font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">🫐 Obst</div>
+              <div style="font-size: 12px; color: #374151; line-height: 1.8;">
+                <div>✅ Beeren aller Art <span style="color:#9ca3af;">(bis 150g frei)</span></div>
+                <div>✅ Erdbeeren, Johannisbeeren</div>
+                <div>✅ Melone <span style="color:#9ca3af;">(viel Wasser)</span></div>
+                <div>⚠️ Apfel/Birne <span style="color:#9ca3af;">(max. 1 Stück)</span></div>
+                <div>❌ Große Obstmengen <span style="color:#9ca3af;">(Fruchtzucker)</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="margin: 0; padding: 1.25rem;">
+              <div style="font-size: 12px; font-weight: 700; color: #065f46; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">🥦 Gemüse – fast unbegrenzt</div>
+              <div style="font-size: 12px; color: #374151; line-height: 1.8;">
+                <div>✅ Gurke, Tomate, Paprika</div>
+                <div>✅ Möhre, Radieschen</div>
+                <div>✅ Staudensellerie</div>
+                <div>✅ Kohlrabi</div>
+                <div>✅ Eisbergsalat, Feldsalat</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin: 0; padding: 1.25rem;">
+              <div style="font-size: 12px; font-weight: 700; color: #92400e; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">🍘 KH mit Maß</div>
+              <div style="font-size: 12px; color: #374151; line-height: 1.8;">
+                <div>✅ Reiswaffeln natur <span style="color:#9ca3af;">(2–3 Stück)</span></div>
+                <div>✅ Vollkornkräcker <span style="color:#9ca3af;">(2–3 Stück)</span></div>
+                <div>❌ Gesalzene Varianten</div>
+                <div>❌ Süße Snacks</div>
+                <div>❌ Frittiertes</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin: 0; padding: 1.25rem;">
+              <div style="font-size: 12px; font-weight: 700; color: #6d28d9; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">🥛 Protein-Snacks</div>
+              <div style="font-size: 12px; color: #374151; line-height: 1.8;">
+                <div>✅ Quark natur <span style="color:#9ca3af;">(100–150g)</span></div>
+                <div>✅ Buttermilch <span style="color:#9ca3af;">(200ml)</span></div>
+                <div>✅ Magerjoghurt natur <span style="color:#9ca3af;">(150g)</span></div>
+                <div>✅ 30g Nussmix <span style="color:#9ca3af;">(Office 16:00)</span></div>
+                <div style="color:#9ca3af; font-size: 11px; margin-top: 0.5rem;">☕ Kaffee schwarz oder 100ml Magermilch</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeEditModal()">&times;</span>
+    <div class="modal-header">Eintrag bearbeiten</div>
+    
+    <div class="input-row">
+      <div class="input-group">
+        <label>Datum</label>
+        <input type="text" id="edit-datum" placeholder="JJJJ-MM-TT" />
+      </div>
+      <div class="input-group">
+        <label>Sportart</label>
+        <select id="edit-sportart">
+          <option value="Joggen">Joggen</option>
+          <option value="Treppensteigen">Treppensteigen</option>
+          <option value="Laufband">Laufband</option>
+          <option value="Rower">Rower</option>
+          <option value="Assault Bike">Assault Bike</option>
+          <option value="Fitness Training">Fitness Training</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Trainingsabschnitt</label>
+        <select id="edit-bemerkung">
+          <option value="">-- Wählen --</option>
+          <option value="Warmup">Warmup</option>
+          <option value="Hauptteil">Hauptteil</option>
+          <option value="Cooldown">Cooldown</option>
+          <option value="Regeneration">Regeneration</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Distanz (km)</label>
+        <input type="number" id="edit-distanz" step="0.1" />
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Minuten</label>
+        <input type="number" id="edit-minuten" min="0" />
+      </div>
+      <div class="input-group">
+        <label>Sekunden</label>
+        <input type="number" id="edit-sekunden" min="0" max="59" />
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Puls von</label>
+        <input type="number" id="edit-puls-von" />
+      </div>
+      <div class="input-group">
+        <label>Puls bis</label>
+        <input type="number" id="edit-puls-bis" />
+      </div>
+      <div class="input-group">
+        <label>Ø Puls dieses Trainings</label>
+        <input type="number" id="edit-puls-durchschnitt" />
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Aktivitätskalorien</label>
+        <input type="number" id="edit-aktivitaets-kalorien" />
+      </div>
+      <div class="input-group">
+        <label>Gesamtkalorien</label>
+        <input type="number" id="edit-gesamt-kalorien" />
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button onclick="saveEdit()">✓ Speichern</button>
+      <button class="secondary" onclick="closeEditModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trainingsplan-Empfehlungs-Modal -->
+<div id="recommendationModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeRecommendationModal()">&times;</span>
+    <div class="modal-header" id="recommendationTitle">Trainingsempfehlung</div>
+    
+    <!-- Zusammenfassung des heutigen Trainings -->
+    <div class="plan-section" style="background: #f0f9ff; border-left: 3px solid #3b82f6; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+      <div class="plan-section-label">📊 Heutiges Training</div>
+      <div class="plan-section-content" id="recommendationSummary" style="font-size: 12px; color: #1f2937; line-height: 1.6;">—</div>
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <div class="plan-section">
+        <div class="plan-section-label">Empfohlene Sportart</div>
+        <div class="plan-section-content" id="recommendationSport" style="font-size: 14px; font-weight: 600; color: #3b82f6;">—</div>
+      </div>
+      
+      <div class="plan-section">
+        <div class="plan-section-label">Training</div>
+        <div class="plan-section-content" id="recommendationTraining">—</div>
+      </div>
+      
+      <div class="plan-section">
+        <div class="plan-section-label">Begründung</div>
+        <div class="plan-section-content" id="recommendationBegründung">—</div>
+      </div>
+      
+      <div class="plan-section">
+        <div class="plan-section-label">Intensität</div>
+        <div class="plan-section-content" id="recommendationIntensitaet">—</div>
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button onclick="acceptRecommendation()">✓ Empfehlung annehmen</button>
+      <button class="secondary" onclick="closeRecommendationModal()">✕ Ablehnen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// FIREBASE KONFIGURATION – HIER DEINE WERTE EINTRAGEN
+// (nach Setup aus der Firebase Console kopieren)
+// ============================================================
+const firebaseConfig = {
+  apiKey: "DEIN_API_KEY",
+  authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
+  projectId: "DEIN_PROJECT_ID",
+  storageBucket: "DEIN_PROJECT_ID.appspot.com",
+  messagingSenderId: "DEIN_SENDER_ID",
+  appId: "DEIN_APP_ID"
+};
+// ============================================================
+
+let db = null;
+const FB_CONFIGURED = firebaseConfig.apiKey !== "DEIN_API_KEY";
+
+function initFirebase() {
+  if (!FB_CONFIGURED) {
+    showSyncStatus('not-configured');
+    return;
+  }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    showSyncStatus('connecting');
+    // Echtzeit-Listener: Wenn anderes Gerät Daten ändert, sofort updaten
+    db.collection('tracker').doc('allData').onSnapshot(doc => {
+      if (!doc.exists) { showSyncStatus('synced'); return; }
+      const fbData = doc.data();
+      const fbTime = fbData.lastModified || 0;
+      const localTime = parseInt(localStorage.getItem('lastModified') || '0');
+      if (fbTime > localTime) {
+        applyFirebaseData(fbData);
+        showSyncStatus('synced');
+      } else {
+        showSyncStatus('synced');
+      }
+    }, () => showSyncStatus('offline'));
+  } catch(e) {
+    showSyncStatus('offline');
+  }
+}
+
+function applyFirebaseData(fbData) {
+  if (fbData.trainingsEntries && Array.isArray(fbData.trainingsEntries)) {
+    entries = fbData.trainingsEntries;
+    try { localStorage.setItem('trainingsEntries', JSON.stringify(entries)); } catch(e) {}
+  }
+  if (fbData.weightEntries) {
+    weightEntries = fbData.weightEntries;
+    try { localStorage.setItem('weightEntries', JSON.stringify(weightEntries)); } catch(e) {}
+  }
+  if (fbData.bodyFatEntries) {
+    bodyFatEntries = fbData.bodyFatEntries;
+    try { localStorage.setItem('bodyFatEntries', JSON.stringify(bodyFatEntries)); } catch(e) {}
+  }
+  if (fbData.planStatus) {
+    try { localStorage.setItem('planStatus', JSON.stringify(fbData.planStatus)); } catch(e) {}
+  }
+  try { localStorage.setItem('lastModified', (fbData.lastModified || 0).toString()); } catch(e) {}
+  // UI neu rendern
+  if (typeof renderAll === 'function') renderAll();
+  else {
+    if (typeof renderTable === 'function') renderTable();
+    if (typeof renderAnalysis === 'function') renderAnalysis();
+    if (typeof renderSports === 'function') renderSports();
+    if (typeof renderWeightHistory === 'function') renderWeightHistory();
+    if (typeof renderWeightComparison === 'function') renderWeightComparison();
+    if (typeof renderBodyFatHistory === 'function') renderBodyFatHistory();
+  }
+}
+
+function syncToFirebase() {
+  if (!db) { showSyncStatus(FB_CONFIGURED ? 'offline' : 'not-configured'); return; }
+  showSyncStatus('saving');
+  const now = Date.now();
+  try { localStorage.setItem('lastModified', now.toString()); } catch(e) {}
+  const planStatusObj = {};
+  try { Object.assign(planStatusObj, JSON.parse(localStorage.getItem('planStatus') || '{}')); } catch(e) {}
+  db.collection('tracker').doc('allData').set({
+    trainingsEntries: entries || [],
+    weightEntries: (typeof weightEntries !== 'undefined') ? weightEntries : [],
+    bodyFatEntries: (typeof bodyFatEntries !== 'undefined') ? bodyFatEntries : [],
+    planStatus: planStatusObj,
+    lastModified: now
+  }).then(() => showSyncStatus('synced'))
+    .catch(() => showSyncStatus('offline'));
+}
+
+function showSyncStatus(status) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const states = {
+    'not-configured': '⚙️ Firebase nicht konfiguriert (nur lokal)',
+    'connecting':     '🔄 Verbinde mit Firebase...',
+    'synced':         '✅ Synchronisiert',
+    'saving':         '💾 Speichert...',
+    'offline':        '📱 Offline – lokal gespeichert',
+    'error':          '⚠️ Sync-Fehler'
+  };
+  el.textContent = states[status] || status;
+}
+
+// Service Worker registrieren
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<script>
+const trainingPlan = {
+  'Montag': { training: 'Rower intensiv', dauer: '30–35 Min', intensitaet: 'Hoch', details: { aufwaermen: '5 Min lockeres Rudern', aufwaermen_puls: '120–130 BPM', hauptteil: '20-25 Min Rower High-Intensity', hauptteil_puls: '150–175 BPM', cooldown: '5 Min Easy Recovery', cooldown_puls: '110–120 BPM', pulsbereich: '150–175 BPM', kalorien: '400–550 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Concept2 Rower Display\n• Zeit: Concept2 Rower Display\n• Puls: Apple Watch\n• Kalorien: Concept2 Rower Display' } },
+  'Dienstag': { training: 'Recovery-Jogging', dauer: '5–7 km', intensitaet: 'Niedrig', details: { aufwaermen: 'keine', hauptteil: '5–7 km lockeres Jogging (Erholung)', cooldown: 'Stretching', pulsbereich: '125–145 BPM', kalorien: '250–350 kcal' } },
+  'Mittwoch': { training: 'Joggen-Intervalle (Home Office)', dauer: '55–65 Min', intensitaet: 'Mittel–Hoch', details: { aufwaermen: '5 Min lockeres Traben (120–130 BPM)', hauptteil: '5–6 × (3 Min zügig 145–175 BPM + 2 Min locker 130–140 BPM)', cooldown: '5 Min lockeres Auslaufen', pulsbereich: '145–175 BPM (zügig), 130–140 BPM (locker)', kalorien: '450–600 kcal' } },
+  'Donnerstag': { training: 'Rower Recovery (Home Office)', dauer: '23–28 Min', intensitaet: 'Niedrig', details: { aufwaermen: '5 Min lockeres Rudern', aufwaermen_puls: '120–130 BPM', hauptteil: '15–18 Min Steady Easy Rower – konstantes lockeres Tempo', hauptteil_puls: '130–145 BPM', cooldown: '3–5 Min Easy Auslaufen', cooldown_puls: '110–120 BPM', pulsbereich: '130–145 BPM (Hauptteil)', kalorien: '300–350 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Concept2 Rower Display (~5–5,5 km)\n• Zeit: Concept2 Rower Display\n• Puls: Apple Watch\n• Ziel: Aktive Erholung, keine Belastung' } },
+  'Freitag': { training: 'Ruhetag (optional leicht)', dauer: '0 Min oder Spaziergang', intensitaet: 'Ruhe', details: { aufwaermen: 'keine', hauptteil: 'Voller Ruhetag oder optional: 15–20 Min lockerer Spaziergang (sehr easy)', cooldown: 'Stretching oder Entspannung', pulsbereich: '– (Ruhetag)', kalorien: '0 kcal (oder 100–150 kcal bei Spaziergang)' } },
+  'Samstag/Sonntag': { training: 'Längerer Lauf oder Ruhetag', dauer: '10–12 km oder Rest', intensitaet: 'Niedrig–Mittel oder Ruhe', details: { aufwaermen: 'keine', hauptteil: '10–12 km gemütlicher Lauf oder aktiver Ruhetag', cooldown: 'Stretching oder Yoga', pulsbereich: '130–150 BPM (falls Training)', kalorien: '400–600 kcal (falls Training)' } }
+};
+
+let entries = [];
+let currentPage = 1;
+let selectedDay = 'Montag';
+let currentEditIdx = null;
+
+function getIntensitaetClass(intensitaet) {
+  if (intensitaet.includes('Hoch')) return 'intensity-hoch';
+  if (intensitaet.includes('Mittel')) return 'intensity-mittel';
+  return 'intensity-niedrig';
+}
+
+function getTodayDayName() {
+  const today = new Date();
+  const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  return days[today.getDay()];
+}
+
+function renderTrainingPlan() {
+  const container = document.getElementById('planDaysContainer');
+  const todayDayName = getTodayDayName();
+  let planStatus = {};
+  try { planStatus = JSON.parse(localStorage.getItem('planStatus')) || {}; } catch(e) {}
+  
+  let html = '';
+  Object.keys(trainingPlan).forEach(day => {
+    const plan = trainingPlan[day];
+    const isToday = day === todayDayName;
+    const isActive = day === selectedDay;
+    const status = planStatus[day];
+    
+    let bgStyle = '';
+    if (status === 'done') bgStyle = 'background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-color: #10b981;';
+    else if (status === 'skip') bgStyle = 'background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-color: #ef4444;';
+    else if (status === 'sick') bgStyle = 'background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-color: #9ca3af; opacity: 0.75;';
+    else if (isToday) bgStyle = 'border-color: #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);';
+    
+    html += '<div class="plan-day-box ' + (isActive ? 'active' : '') + '" onclick="selectTrainingDay(\'' + day + '\')" style="' + bgStyle + '">';
+    html += '<div class="plan-day-name">' + day + (isToday && !status ? ' 📍' : '') + '</div>';
+    html += '<div class="plan-day-info">' + plan.training + '<br>' + plan.dauer + '</div>';
+    html += '<div class="plan-intensity ' + getIntensitaetClass(plan.intensitaet) + '">' + plan.intensitaet + '</div>';
+    html += '</div>';
+  });
+  html += '<button onclick="resetPlanStatus()" style="width: 100%; margin-top: 1rem; padding: 10px 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: white; transition: all 0.2s;">🔄 Plan-Status zurücksetzen</button>';
+  container.innerHTML = html;
+}
+
+function selectTrainingDay(day) {
+  selectedDay = day;
+  renderTrainingPlan();
+  renderTrainingDetails();
+}
+
+function renderTrainingDetails() {
+  const container = document.getElementById('planDetailsContainer');
+  const plan = trainingPlan[selectedDay];
+  let planStatus = {};
+  try { planStatus = JSON.parse(localStorage.getItem('planStatus')) || {}; } catch(e) {}
+  const status = planStatus[selectedDay];
+  
+  let html = '<div class="plan-details-title">' + selectedDay + '</div>';
+  html += '<div class="plan-section"><div class="plan-section-label">Training</div><div class="plan-section-content">' + plan.training + '</div></div>';
+  
+  // Aufwärmen mit Puls
+  html += '<div class="plan-section"><div class="plan-section-label">Aufwärmen</div><div class="plan-section-content">' + plan.details.aufwaermen + '</div>';
+  if (plan.details.aufwaermen_puls) {
+    html += '<div style="font-size: 11px; color: #6b7280; margin-top: 0.5rem; font-style: italic;">💓 Puls: ' + plan.details.aufwaermen_puls + '</div>';
+  }
+  html += '</div>';
+  
+  // Hauptteil mit Puls und Kadenz
+  html += '<div class="plan-section"><div class="plan-section-label">Hauptteil</div><div class="plan-section-content">' + plan.details.hauptteil + '</div>';
+  if (plan.details.hauptteil_puls) {
+    html += '<div style="font-size: 11px; color: #6b7280; margin-top: 0.5rem; font-style: italic;">💓 Puls: ' + plan.details.hauptteil_puls + '</div>';
+  }
+  if (plan.details.hauptteil_kadenz) {
+    html += '<div style="font-size: 11px; color: #3b82f6; margin-top: 0.5rem; font-style: italic; font-weight: 500;">👟 Kadenz: ' + plan.details.hauptteil_kadenz + ' Schritte/Min</div>';
+  }
+  html += '</div>';
+  
+  // Cooldown mit Puls
+  html += '<div class="plan-section"><div class="plan-section-label">Cooldown</div><div class="plan-section-content">' + plan.details.cooldown + '</div>';
+  if (plan.details.cooldown_puls) {
+    html += '<div style="font-size: 11px; color: #6b7280; margin-top: 0.5rem; font-style: italic;">💓 Puls: ' + plan.details.cooldown_puls + '</div>';
+  }
+  html += '</div>';
+  
+  html += '<div class="plan-section"><div class="plan-section-label">Erwartete Kalorien</div><div class="plan-section-content">' + plan.details.kalorien + '</div></div>';
+  
+  // Datenquellen anzeigen
+  if (plan.details.datenquellen) {
+    html += '<div class="plan-section"><div class="plan-section-label">Datenerfassung</div><div class="plan-section-content" style="white-space: pre-line; font-size: 12px; color: #4b5563; line-height: 1.6;">' + plan.details.datenquellen + '</div></div>';
+  }
+  
+  html += '<div class="plan-status-buttons">';
+  html += '<button class="plan-status-btn ' + (status === 'done' ? 'done' : '') + '" onclick="setPlanStatus(\'' + selectedDay + '\', \'done\')">✓ Absolviert</button>';
+  html += '<button class="plan-status-btn ' + (status === 'skip' ? 'skip' : '') + '" onclick="setPlanStatus(\'' + selectedDay + '\', \'skip\')">✕ Ausgelassen</button>';
+  html += '<button class="plan-status-btn reset" onclick="setPlanStatus(\'' + selectedDay + '\', \'none\')">Reset</button>';
+  html += '</div>';
+
+  container.innerHTML = html;
+  container.style.display = 'block';
+
+  // Ernährungsplan im Hauptbereich rendern
+  const nutritionContainer = document.getElementById('nutritionContainer');
+  if (nutritionContainer) {
+    const nutritionHtml = renderNutritionPlan(selectedDay);
+    if (nutritionHtml) {
+      nutritionContainer.innerHTML = nutritionHtml;
+      nutritionContainer.style.display = 'block';
+    } else {
+      nutritionContainer.style.display = 'none';
+    }
+  }
+}
+
+function renderNutritionPlan(day) {
+  const isHO = homeOfficeDays[day] || false;
+  if (day === 'Samstag/Sonntag') return '';
+
+  const officeplan = [
+    { zeit: '06:45', was: '3 Eier + 2 Scheiben Vollkornbrot' },
+    { zeit: '11:30', was: '1 Banane' },
+    { zeit: '11:45–12:00', was: '🏋️ TRAINING' },
+    { zeit: '13:00', was: 'Hofmanns Menü + Shake (40g + 300ml Milch)' },
+    { zeit: '16:00', was: '30g Nussmix' },
+    { zeit: '19:00–20:00', was: '2 Scheiben Brot + Hähnchen/Käse oder Salat' },
+    { zeit: '20:00–21:00', was: 'Optional: 200g Quark + 1 TL Honig' }
+  ];
+
+  const hofmannsGerichte = [
+    { name: 'Hühnerfrikassee', kcal: 480, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Tandoori-Hähnchen', kcal: 480, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Hähnchen Swiss Style', kcal: 520, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Curryhuhn', kcal: 480, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Zartes Filetsteak + Kartoffeln', kcal: 550, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Hacksteak Gipfelstürmer', kcal: 480, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Königsberger Klopse', kcal: 520, stars: '⭐⭐⭐⭐' },
+    { name: 'Hähnchen-Kebab', kcal: 450, stars: '⭐⭐⭐⭐⭐' },
+    { name: 'Ćevapčići', kcal: 480, stars: '⭐⭐⭐⭐' },
+    { name: 'Hähnchenschnitzel gegrillt', kcal: 500, stars: '⭐⭐⭐⭐⭐' }
+  ];
+
+  const hoOptionen = [
+    { id: 'haehnchen_gemuese', name: '🍗 Hähnchen + Ofengemüse' },
+    { id: 'pute_reis', name: '🍗 Putenbrust + Reis + Brokkoli' },
+    { id: 'haehnchen_pfanne', name: '🥘 Hähnchen-Gemüse-Pfanne' },
+    { id: 'hack_kartoffeln', name: '🥩 Rinderhack + Kartoffeln + Gemüse' },
+    { id: 'ofenkartoffeln', name: '🥔 Ofenkartoffeln + Quark + Kräuter' },
+    { id: 'haehnchen_wrap', name: '🌯 Hähnchen-Wrap (Vollkorn)' },
+    { id: 'salat_haehnchen', name: '🥗 Salat + Hähnchen' },
+    { id: 'brot_kaese', name: '🍞 2 Scheiben Brot + Käse' },
+    { id: 'kartoffeln', name: '🥔 Kartoffeln + Gemüse' }
+  ];
+
+  // Intensität bestimmen
+  const training = trainingPlan[day] || {};
+  const intensitaet = training.intensitaet || '';
+  const trainingsName = (training.training || '').toLowerCase();
+  
+  // Status prüfen (krank, feiertag, ruhetag)
+  let planStatus = {};
+  try { planStatus = JSON.parse(localStorage.getItem('planStatus')) || {}; } catch(e) {}
+  let sickDaysLocal = {};
+  try { sickDaysLocal = JSON.parse(localStorage.getItem('sickdays_' + getWeekKey())) || {}; } catch(e) {}
+  let holidayDaysLocal = {};
+  try { holidayDaysLocal = JSON.parse(localStorage.getItem('holidays_' + getWeekKey())) || {}; } catch(e) {}
+
+  const isSick = sickDaysLocal[day] || false;
+  const isHoliday = holidayDaysLocal[day] || false;
+  const isIntensiv = intensitaet.includes('Hoch') || trainingsName.includes('intensiv') || trainingsName.includes('hiit') || trainingsName.includes('intervall');
+  const isModerat = intensitaet.includes('Moderat') || intensitaet.includes('Mittel') || trainingsName.includes('moderat');
+  const isLeicht = trainingsName.includes('recovery') || trainingsName.includes('treppensteigen') || trainingsName.includes('laufband') || intensitaet.includes('Niedrig');
+  const isRuhe = intensitaet.includes('Ruhe') || trainingsName.includes('ruhetag') || trainingsName.includes('pause');
+
+  // Mittagessen je nach Intensität
+  let mittagessen, abendessen, hinweis, label;
+
+  if (isSick) {
+    mittagessen = '🍲 Leichte Suppe oder Brot + Käse';
+    abendessen = '🍞 2 Scheiben Brot + etwas Quark';
+    hinweis = '🤒 Krank: Viel trinken (Wasser, Tee). Kein intensives Training. Stattdessen: 10–15 Min lockerer Spaziergang wenn möglich, oder Stretching/Yoga zuhause.';
+    label = '🤒 Ernährungsplan – Krankheitstag';
+  } else if (isHoliday || isRuhe) {
+    mittagessen = '🥗 Salat + Hähnchen oder 2 Brote + Käse';
+    abendessen = '🥗 Viel Gemüse + leichtes Protein (Hähnchen oder Quark)';
+    hinweis = '💤 Ruhetag: Weniger KH nötig. Fokus auf Gemüse und Protein. Kein Shake heute.';
+    label = '🎉 Ernährungsplan – Ruhetag';
+  } else if (isIntensiv) {
+    mittagessen = '🥩 Hähnchen/Pute + Reis oder Kartoffeln + Gemüse <span style="color:#10b981;font-weight:600;">(mehr KH nach intensivem Training!)</span>';
+    abendessen = '🍗 Hähnchen oder Rinderhack + 1–2 Scheiben Brot';
+    hinweis = '💪 Intensives Training: Mehr Kohlenhydrate zur Regeneration. Vitaminwasser nach Training nicht vergessen.';
+    label = '🔥 Ernährungsplan – Intensivtag';
+  } else if (isModerat) {
+    mittagessen = '🍗 Hähnchen + Ofengemüse oder Salat + Hähnchen';
+    abendessen = '🍗 Hähnchen oder Pute + wenig KH (1 Scheibe Brot oder Salat)';
+    hinweis = '🏃 Moderates Training: Normales Mittagessen, abends etwas leichter.';
+    label = '🏃 Ernährungsplan – Moderater Tag';
+  } else if (isLeicht) {
+    mittagessen = '🥗 Salat + Hähnchen oder 2–3 Brote + 40g Käse';
+    abendessen = '🥗 Viel Gemüse + Protein, wenig KH';
+    hinweis = '🚶 Leichtes Training (Treppensteigen/Recovery): Weniger KH nötig. Mehr Gemüse und Protein, weniger Brot/Kartoffeln.';
+    label = '🚶 Ernährungsplan – Leichter Tag';
+  } else {
+    mittagessen = '🍗 Hähnchen + Gemüse oder Salat + Hähnchen';
+    abendessen = '🍗 Protein + KH (Hähnchen oder Eier)';
+    hinweis = '';
+    label = '🏠 Ernährungsplan – Home Office';
+  }
+
+  // Basisplan aufbauen
+  const hoplan = [
+    { zeit: '06:45', was: '3 Eier + 2 Scheiben Vollkornbrot' },
+    { zeit: '11:30', was: isSick ? '🍵 Tee oder Wasser' : '200ml Buttermilch' },
+    { zeit: '11:45–12:00', was: isSick ? '🚶 Spaziergang 10–15 Min (wenn möglich)' : isHoliday || isRuhe ? '☀️ Kein Training heute' : '🏋️ TRAINING' },
+    { zeit: '12:05', was: isSick || isHoliday || isRuhe ? '—' : 'Vitaminwasser (grünes Etikett, ohne Zucker)' },
+    { zeit: '13:00', was: mittagessen },
+    { zeit: '16:00', was: isSick ? '🍵 Tee + 2 Reiswaffeln' : '200–300ml Buttermilch' },
+    { zeit: '19:00–20:00', was: abendessen },
+    { zeit: '20:00–21:00', was: 'Optional: 200g Quark + 1 TL Honig' }
+  ].filter(item => item.was !== '—');
+
+  const plan = isHO ? hoplan : officeplan;
+
+  // Gespeicherte Auswahl laden
+  let mealSelections = {};
+  try { mealSelections = JSON.parse(localStorage.getItem('mealSelections_' + getWeekKey())) || {}; } catch(e) {}
+  const todaySelections = mealSelections[day] || [];
+
+  // Ernährungsplan HTML
+  let planHtml = '<div style="margin-top: 1.5rem; border-top: 2px solid #f3f4f6; padding-top: 1.25rem;">';
+  planHtml += '<div class="plan-section-label" style="margin-bottom: 0.75rem;">' + label + '</div>';
+  plan.forEach(item => {
+    const isTraining = item.was.includes('TRAINING');
+    const bg = isTraining ? 'background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); font-weight: 600;' : '';
+    planHtml += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.6rem; margin-bottom: 0.35rem; border-radius: 6px; font-size: 12px; ' + bg + '">';
+    planHtml += '<span style="color: #6b7280; font-weight: 600; min-width: 80px;">' + item.zeit + '</span>';
+    planHtml += '<span style="color: #1f2937; flex: 1; margin-left: 0.5rem;">' + item.was + '</span>';
+    planHtml += '</div>';
+  });
+  planHtml += '<div style="margin-top: 0.75rem; padding: 0.5rem 0.6rem; background: #f9fafb; border-radius: 6px; font-size: 11px; color: #6b7280;">☕ Kaffee: schwarz oder max. 100ml Magermilch · kein Zucker</div>';
+  planHtml += '</div>';
+
+  // Mahlzeit-Auswahl HTML
+  let mealHtml = '';
+  if (!isHO) {
+    // Office: Hofmanns Top 10
+    mealHtml += '<div class="plan-section-label" style="margin-bottom: 0.75rem;">🍽️ Hofmanns Menü – Auswahl</div>';
+    hofmannsGerichte.forEach((g) => {
+      const isSelected = todaySelections.includes(g.name);
+      mealHtml += '<div class="meal-item ' + (isSelected ? 'selected' : '') + '" onclick="toggleMeal(\'' + day + '\', \'' + g.name.replace(/'/g, "\\'") + '\', this)">';
+      mealHtml += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="event.stopPropagation()">';
+      mealHtml += '<span>' + g.name + '</span>';
+      mealHtml += '<span class="meal-stars">' + g.stars + '</span>';
+      mealHtml += '<span class="meal-kcal">' + g.kcal + ' kcal</span>';
+      mealHtml += '</div>';
+    });
+  } else {
+    // HO: eigene Optionen + warmes Essen
+    const warmMeal = mealSelections[day + '_warm'] || '';
+    const warmSelected = mealSelections[day] && mealSelections[day].includes('🍲 Warmes Essen');
+    
+    mealHtml += '<div class="plan-section-label" style="margin-bottom: 0.75rem;">🍽️ Mittagessen – Auswahl</div>';
+    hoOptionen.forEach(opt => {
+      const isSelected = todaySelections.includes(opt.name);
+      mealHtml += '<div class="meal-item ' + (isSelected ? 'selected' : '') + '" onclick="toggleMeal(\'' + day + '\', \'' + opt.name + '\', this)">';
+      mealHtml += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="event.stopPropagation()">';
+      mealHtml += '<span>' + opt.name + '</span>';
+      mealHtml += '</div>';
+    });
+    
+    // Warmes Essen Option
+    mealHtml += '<div class="meal-item ' + (warmSelected ? 'selected' : '') + '" onclick="toggleMeal(\'' + day + '\', \'🍲 Warmes Essen\', this)">';
+    mealHtml += '<input type="checkbox" ' + (warmSelected ? 'checked' : '') + ' onclick="event.stopPropagation()">';
+    mealHtml += '<span>🍲 Warmes Essen</span>';
+    mealHtml += '</div>';
+    
+    // Textfeld für warmes Essen
+    mealHtml += '<div id="warmMealInput_' + day + '" style="margin-top: 0.5rem; display: ' + (warmSelected ? 'block' : 'none') + ';">';
+    mealHtml += '<input type="text" id="warmMealText_' + day + '" value="' + warmMeal + '" placeholder="Was gab es? z.B. Hähnchenpfanne..." ' +
+      'style="width: 100%; padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 12px; color: #1f2937;" ' +
+      'onchange="saveWarmMeal(\'' + day + '\', this.value)" ' +
+      'oninput="saveWarmMeal(\'' + day + '\', this.value)">';
+    mealHtml += '</div>';
+  }
+
+  // Wochenübersicht
+  const weekDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+  let weekHtml = '<div class="week-meal-box" style="grid-column: 1 / -1; margin-top: 0.5rem;">';
+  weekHtml += '<div class="week-meal-title">📅 Wochenübersicht Mittagessen</div>';
+  let hasAny = false;
+  weekDays.forEach(d => {
+    const sel = mealSelections[d] || [];
+    const warmText = mealSelections[d + '_warm'] || '';
+    if (sel.length > 0) {
+      hasAny = true;
+      const displaySel = sel.map(s => (s === '🍲 Warmes Essen' && warmText) ? '🍲 ' + warmText : s);
+      weekHtml += '<div class="week-meal-row">';
+      weekHtml += '<span class="week-meal-day">' + d + '</span>';
+      weekHtml += '<span class="week-meal-food">' + displaySel.join(', ') + '</span>';
+      weekHtml += '</div>';
+    }
+  });
+  if (!hasAny) weekHtml += '<div style="font-size: 11px; color: #9ca3af; text-align: center; padding: 0.5rem;">Noch nichts ausgewählt</div>';
+  weekHtml += '</div>';
+
+  let html = planHtml;
+  html += '<div class="nutrition-grid">';
+  html += '<div>' + planHtml.replace(planHtml, '') + '</div>'; // placeholder
+  html += mealHtml;
+  html += weekHtml;
+  html += '</div>';
+
+  // Layout: 3 Spalten im Hauptbereich - volle Breite
+  const planCol =
+    '<div class="plan-section" style="margin: 0;">' +
+    '<div class="plan-section-label" style="margin-bottom: 0.75rem;">' + label + '</div>' +
+    plan.map(item => {
+      const isTraining = item.was.includes('TRAINING');
+      const bg = isTraining ? 'background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); font-weight: 600; border-radius: 6px; padding: 0.4rem 0.5rem;' : 'padding: 0.4rem 0;';
+      return '<div style="display: flex; align-items: flex-start; border-bottom: 1px solid #f3f4f6; font-size: 12px; ' + bg + '">' +
+        '<span style="color: #6b7280; font-weight: 600; min-width: 80px; flex-shrink: 0;">' + item.zeit + '</span>' +
+        '<span style="color: #1f2937; flex: 1;">' + item.was + '</span>' +
+        '</div>';
+    }).join('') +
+    '<div style="margin-top: 0.75rem; font-size: 11px; color: #6b7280; font-style: italic;">☕ Schwarz oder max. 100ml Magermilch</div>' +
+    '</div>';
+
+  const mealCol =
+    '<div class="plan-section" style="margin: 0;">' +
+    '<div class="plan-section-label" style="margin-bottom: 0.75rem;">' + (isHO ? '🍽️ Mittagessen' : '🍽️ Hofmanns Menü') + '</div>' +
+    mealHtml +
+    '</div>';
+
+  const weekCol =
+    '<div class="plan-section" style="margin: 0;">' +
+    weekHtml +
+    '</div>';
+
+  return '<div class="section">' +
+    '<div class="section-title">🥗 Ernährung – ' + selectedDay + '</div>' +
+    (hinweis ? '<div style="padding: 0.75rem 1rem; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 4px solid #f59e0b; border-radius: 8px; font-size: 12px; color: #92400e; margin-bottom: 1rem;">' + hinweis + '</div>' : '') +
+    '<div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1.5rem;">' +
+    '<div class="card" style="margin: 0; padding: 1.5rem;">' + planCol + '</div>' +
+    '<div class="card" style="margin: 0; padding: 1.5rem;">' + mealCol + '</div>' +
+    '<div class="card" style="margin: 0; padding: 1.5rem;">' + weekCol + '</div>' +
+    '</div>' +
+    '</div>';
+}
+
+function saveWarmMeal(day, value) {
+  let mealSelections = {};
+  try { mealSelections = JSON.parse(localStorage.getItem('mealSelections_' + getWeekKey())) || {}; } catch(e) {}
+  mealSelections[day + '_warm'] = value;
+  try { localStorage.setItem('mealSelections_' + getWeekKey(), JSON.stringify(mealSelections)); } catch(e) {}
+}
+
+function toggleMeal(day, mealName, el) {
+  let mealSelections = {};
+  try { mealSelections = JSON.parse(localStorage.getItem('mealSelections_' + getWeekKey())) || {}; } catch(e) {}
+  if (!mealSelections[day]) mealSelections[day] = [];
+
+  const idx = mealSelections[day].indexOf(mealName);
+  const checkbox = el.querySelector('input[type=checkbox]');
+
+  if (idx > -1) {
+    mealSelections[day].splice(idx, 1);
+    el.classList.remove('selected');
+    if (checkbox) checkbox.checked = false;
+    // Warmes Essen Textfeld verstecken
+    if (mealName === '🍲 Warmes Essen') {
+      const inputDiv = document.getElementById('warmMealInput_' + day);
+      if (inputDiv) inputDiv.style.display = 'none';
+    }
+  } else {
+    const isHO = homeOfficeDays[day] || false;
+    if (!isHO) mealSelections[day] = [];
+    mealSelections[day].push(mealName);
+    el.classList.add('selected');
+    if (checkbox) checkbox.checked = true;
+    // Warmes Essen Textfeld anzeigen
+    if (mealName === '🍲 Warmes Essen') {
+      const inputDiv = document.getElementById('warmMealInput_' + day);
+      if (inputDiv) inputDiv.style.display = 'block';
+    }
+    // Bei Office: andere Checkboxen deselektieren
+    if (!isHO) {
+      el.closest('div').querySelectorAll('.meal-item').forEach(item => {
+        if (item !== el) {
+          item.classList.remove('selected');
+          const cb = item.querySelector('input[type=checkbox]');
+          if (cb) cb.checked = false;
+        }
+      });
+    }
+  }
+
+  try { localStorage.setItem('mealSelections_' + getWeekKey(), JSON.stringify(mealSelections)); } catch(e) {}
+  // Nur Wochenübersicht aktualisieren ohne komplettes Re-render
+  const weekBox = document.querySelector('.week-meal-box');
+  if (weekBox) {
+    const weekDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+    let weekContent = '<div class="week-meal-title">📅 Wochenübersicht Mittagessen</div>';
+    let hasAny = false;
+    weekDays.forEach(d => {
+      const sel = mealSelections[d] || [];
+      const warmText = mealSelections[d + '_warm'] || '';
+      if (sel.length > 0) {
+        hasAny = true;
+        const displaySel = sel.map(s => (s === '🍲 Warmes Essen' && warmText) ? '🍲 ' + warmText : s);
+        weekContent += '<div class="week-meal-row"><span class="week-meal-day">' + d + '</span><span class="week-meal-food">' + displaySel.join(', ') + '</span></div>';
+      }
+    });
+    if (!hasAny) weekContent += '<div style="font-size: 11px; color: #9ca3af; text-align: center; padding: 0.5rem;">Noch nichts ausgewählt</div>';
+    weekBox.innerHTML = weekContent;
+  }
+}
+
+
+
+function setPlanStatus(day, status) {
+  let planStatus = {};
+  try { planStatus = JSON.parse(localStorage.getItem('planStatus')) || {}; } catch(e) {}
+  
+  if (status === 'none') delete planStatus[day];
+  else planStatus[day] = status;
+  
+  try { localStorage.setItem('planStatus', JSON.stringify(planStatus)); } catch(e) {}
+  renderTrainingPlan();
+  renderTrainingDetails();
+}
+
+function updateWeekRange() {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const weekStart = new Date(today.setDate(diff));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  
+  const formatDate = (d) => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  document.getElementById('weekRange').textContent = formatDate(weekStart) + ' - ' + formatDate(weekEnd);
+}
+
+function formatDatumInput(input) {
+  let value = input.value;
+  if (value.toLowerCase() === 'h') return 'h';
+  
+  value = value.replace(/\D/g, '');
+  if (value.length === 0) return '';
+  if (value.length <= 2) return value;
+  if (value.length <= 4) return value.substring(0, 2) + '.' + value.substring(2);
+  if (value.length <= 8) return value.substring(0, 2) + '.' + value.substring(2, 4) + '.' + value.substring(4);
+  
+  return value.substring(0, 2) + '.' + value.substring(2, 4) + '.' + value.substring(4, 8);
+}
+
+function convertDatumFormatToISO(datumStr) {
+  if (datumStr === 'h' || datumStr === 'heute') {
+    const today = new Date();
+    return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  }
+  
+  const parts = datumStr.split('.');
+  if (parts.length === 3) {
+    return parts[2] + '-' + String(parseInt(parts[1])).padStart(2, '0') + '-' + String(parseInt(parts[0])).padStart(2, '0');
+  }
+  return datumStr;
+}
+
+function checkLocalStorage() {
+  try {
+    const test = '__localStorage_test__';
+    localStorage.setItem(test, 'test');
+    localStorage.removeItem(test);
+    return true;
+  } catch(e) {
+    console.error('⚠️ localStorage nicht verfügbar:', e);
+    alert('⚠️ WARNUNG: Dein Browser speichert Daten nicht! Du nutzt wahrscheinlich:\n- Private/Incognito-Fenster\n- Zu wenig Speicherplatz\n- Einen sehr restriktiven Browser\n\nDeine Daten gehen nach jedem Refresh verloren! Nutze Export/Import zum Speichern.');
+    return false;
+  }
+}
+
+function loadData() {
+  try {
+    const VERSION_KEY = 'tracker_data_version';
+    const CURRENT_VERSION = 'v4_2026-06-23';
+    const loadedVersion = localStorage.getItem(VERSION_KEY);
+    
+    // Neue Version – Daten einmalig einbetten
+    if (loadedVersion !== CURRENT_VERSION) {
+      const preloadedData = [{"datum":"2026-04-13","sportart":"Assault Bike","bemerkung":"Hauptteil","distanz":10.3,"minuten":33,"sekunden":10,"pulsVon":83,"pulsBis":173,"pulsDurchschnitt":147,"aktivitaetsKalorien":356,"gesamtKalorien":420},{"datum":"2026-04-14","sportart":"Rower","bemerkung":"Hauptteil","distanz":8,"minuten":37,"sekunden":34,"pulsVon":77,"pulsBis":180,"pulsDurchschnitt":149,"aktivitaetsKalorien":295,"gesamtKalorien":367},{"datum":"2026-04-10","sportart":"Joggen","bemerkung":"Regeneration","distanz":8.01,"minuten":58,"sekunden":53,"pulsVon":129,"pulsBis":153,"pulsDurchschnitt":145,"aktivitaetsKalorien":647,"gesamtKalorien":761},{"datum":"2026-04-09","sportart":"Assault Bike","bemerkung":"Hauptteil","distanz":10.2,"minuten":33,"sekunden":49,"pulsVon":92,"pulsBis":172,"pulsDurchschnitt":145,"aktivitaetsKalorien":336,"gesamtKalorien":400},{"datum":"2026-04-15","sportart":"Joggen","bemerkung":"Regeneration","distanz":7.03,"minuten":57,"sekunden":10,"pulsVon":107,"pulsBis":156,"pulsDurchschnitt":143,"aktivitaetsKalorien":592,"gesamtKalorien":702},{"datum":"2026-04-16","sportart":"Assault Bike","bemerkung":"Hauptteil","distanz":5,"minuten":15,"sekunden":10,"pulsVon":128,"pulsBis":162,"pulsDurchschnitt":147,"aktivitaetsKalorien":156,"gesamtKalorien":185},{"datum":"2026-04-16","sportart":"Assault Bike","bemerkung":"Cooldown","distanz":1.5,"minuten":5,"sekunden":0,"pulsVon":126,"pulsBis":146,"pulsDurchschnitt":134,"aktivitaetsKalorien":42,"gesamtKalorien":52},{"datum":"2026-04-16","sportart":"Assault Bike","bemerkung":"Warmup","distanz":1.4,"minuten":4,"sekunden":59,"pulsVon":88,"pulsBis":116,"pulsDurchschnitt":107,"aktivitaetsKalorien":35,"gesamtKalorien":45},{"datum":"2026-04-16","sportart":"Rower","bemerkung":"Hauptteil","distanz":3.51,"minuten":15,"sekunden":30,"pulsVon":88,"pulsBis":152,"pulsDurchschnitt":144,"aktivitaetsKalorien":128,"gesamtKalorien":158},{"datum":"2026-04-17","sportart":"Joggen","bemerkung":"Regeneration","distanz":7.21,"minuten":57,"sekunden":4,"pulsVon":103,"pulsBis":148,"pulsDurchschnitt":141,"aktivitaetsKalorien":574,"gesamtKalorien":684},{"datum":"2026-04-21","sportart":"Joggen","bemerkung":"Regeneration","distanz":10,"minuten":77,"sekunden":23,"pulsVon":90,"pulsBis":168,"pulsDurchschnitt":148,"aktivitaetsKalorien":869,"gesamtKalorien":1018},{"datum":"2026-04-22","sportart":"Joggen","bemerkung":"Regeneration","distanz":7.25,"minuten":55,"sekunden":46,"pulsVon":125,"pulsBis":153,"pulsDurchschnitt":138,"aktivitaetsKalorien":596,"gesamtKalorien":704},{"datum":"2026-04-23","sportart":"Rower","distanz":5.5,"minuten":24,"sekunden":56,"pulsVon":119,"pulsBis":177,"pulsDurchschnitt":156,"aktivitaetsKalorien":211,"gesamtKalorien":260,"bemerkung":"Hauptteil"},{"datum":"2026-04-23","sportart":"Assault Bike","bemerkung":"Cooldown","distanz":3.2,"minuten":10,"sekunden":11,"pulsVon":125,"pulsBis":172,"pulsDurchschnitt":148,"aktivitaetsKalorien":106,"gesamtKalorien":125},{"datum":"2026-04-24","sportart":"Assault Bike","distanz":8.5,"minuten":25,"sekunden":0,"pulsVon":84,"pulsBis":158,"pulsDurchschnitt":133,"aktivitaetsKalorien":202,"gesamtKalorien":250,"bemerkung":"Hauptteil"},{"datum":"2026-04-26","sportart":"Joggen","distanz":10.21,"minuten":75,"sekunden":52,"pulsVon":122,"pulsBis":168,"pulsDurchschnitt":144,"aktivitaetsKalorien":800,"gesamtKalorien":946,"bemerkung":"Hauptteil"},{"datum":"2026-04-27","sportart":"Rower","bemerkung":"Warmup","distanz":1.06,"minuten":5,"sekunden":11,"pulsVon":110,"pulsBis":149,"pulsDurchschnitt":124,"aktivitaetsKalorien":37,"gesamtKalorien":47},{"datum":"2026-04-27","sportart":"Rower","distanz":6,"minuten":25,"sekunden":26,"pulsVon":110,"pulsBis":173,"pulsDurchschnitt":159,"aktivitaetsKalorien":219,"gesamtKalorien":268,"bemerkung":"Hauptteil"},{"datum":"2026-04-27","sportart":"Assault Bike","distanz":1.8,"minuten":5,"sekunden":38,"pulsVon":127,"pulsBis":175,"pulsDurchschnitt":159,"aktivitaetsKalorien":63,"gesamtKalorien":73,"bemerkung":"Hauptteil"},{"datum":"2026-04-27","sportart":"Assault Bike","distanz":1.4,"minuten":5,"sekunden":0,"pulsVon":127,"pulsBis":172,"pulsDurchschnitt":145,"aktivitaetsKalorien":46,"gesamtKalorien":55,"bemerkung":"Cooldown"},{"datum":"2026-04-07","sportart":"Rower","distanz":5,"minuten":26,"sekunden":28,"pulsVon":140,"pulsBis":168,"pulsDurchschnitt":151,"aktivitaetsKalorien":231,"gesamtKalorien":282,"bemerkung":"Hauptteil"},{"datum":"2026-04-07","sportart":"Assault Bike","distanz":3,"minuten":11,"sekunden":22,"pulsVon":116,"pulsBis":172,"pulsDurchschnitt":149,"aktivitaetsKalorien":126,"gesamtKalorien":148,"bemerkung":"Hauptteil"},{"datum":"2026-04-04","sportart":"Joggen","distanz":10.02,"minuten":69,"sekunden":40,"pulsVon":104,"pulsBis":181,"pulsDurchschnitt":166,"aktivitaetsKalorien":973,"gesamtKalorien":1108,"bemerkung":"Hauptteil"},{"datum":"2026-04-28","sportart":"Joggen","distanz":8,"minuten":65,"sekunden":13,"pulsVon":123,"pulsBis":159,"pulsDurchschnitt":144,"aktivitaetsKalorien":694,"gesamtKalorien":820,"bemerkung":"Hauptteil"},{"datum":"2026-04-29","sportart":"Joggen","distanz":7.07,"minuten":51,"sekunden":19,"pulsVon":93,"pulsBis":152,"pulsDurchschnitt":142,"aktivitaetsKalorien":559,"gesamtKalorien":658,"bemerkung":"Hauptteil"},{"datum":"2026-04-30","sportart":"Assault Bike","distanz":10,"minuten":32,"sekunden":3,"pulsVon":83,"pulsBis":173,"pulsDurchschnitt":145,"aktivitaetsKalorien":317,"gesamtKalorien":379,"bemerkung":"Hauptteil"},{"datum":"2026-05-04","sportart":"Rower","distanz":1.1,"minuten":5,"sekunden":4,"pulsVon":121,"pulsBis":132,"pulsDurchschnitt":126,"aktivitaetsKalorien":42,"gesamtKalorien":53,"bemerkung":"Warmup"},{"datum":"2026-05-04","sportart":"Rower","distanz":6.035,"minuten":25,"sekunden":0,"pulsVon":106,"pulsBis":173,"pulsDurchschnitt":159,"aktivitaetsKalorien":231,"gesamtKalorien":280,"bemerkung":"Hauptteil"},{"datum":"2026-05-04","sportart":"Rower","distanz":1.005,"minuten":5,"sekunden":0,"pulsVon":132,"pulsBis":142,"pulsDurchschnitt":138,"aktivitaetsKalorien":35,"gesamtKalorien":44,"bemerkung":"Cooldown"},{"datum":"2026-05-05","sportart":"Assault Bike","distanz":1.6,"minuten":5,"sekunden":0,"pulsVon":72,"pulsBis":121,"pulsDurchschnitt":106,"aktivitaetsKalorien":28,"gesamtKalorien":38,"bemerkung":"Warmup"},{"datum":"2026-05-05","sportart":"Assault Bike","distanz":8.4,"minuten":24,"sekunden":52,"pulsVon":113,"pulsBis":171,"pulsDurchschnitt":151,"aktivitaetsKalorien":268,"gesamtKalorien":315,"bemerkung":"Hauptteil"},{"datum":"2026-05-05","sportart":"Assault Bike","distanz":1.3,"minuten":5,"sekunden":7,"pulsVon":121,"pulsBis":149,"pulsDurchschnitt":128,"aktivitaetsKalorien":40,"gesamtKalorien":50,"bemerkung":"Cooldown"},{"datum":"2026-05-06","sportart":"Joggen","distanz":9,"minuten":64,"sekunden":53,"pulsVon":118,"pulsBis":170,"pulsDurchschnitt":148,"aktivitaetsKalorien":768,"gesamtKalorien":893,"bemerkung":"Hauptteil"},{"datum":"2026-05-06","sportart":"Joggen","distanz":0.537,"minuten":5,"sekunden":59,"pulsVon":118,"pulsBis":151,"pulsDurchschnitt":133,"aktivitaetsKalorien":47,"gesamtKalorien":58,"bemerkung":"Cooldown"},{"datum":"2026-05-07","sportart":"Rower","distanz":1.048,"minuten":4,"sekunden":57,"pulsVon":116,"pulsBis":125,"pulsDurchschnitt":120,"aktivitaetsKalorien":34,"gesamtKalorien":44,"bemerkung":"Warmup"},{"datum":"2026-05-07","sportart":"Rower","distanz":5.972,"minuten":26,"sekunden":4,"pulsVon":102,"pulsBis":158,"pulsDurchschnitt":144,"aktivitaetsKalorien":216,"gesamtKalorien":266,"bemerkung":"Hauptteil"},{"datum":"2026-05-07","sportart":"Rower","distanz":0.98,"minuten":5,"sekunden":4,"pulsVon":124,"pulsBis":131,"pulsDurchschnitt":127,"aktivitaetsKalorien":32,"gesamtKalorien":42,"bemerkung":"Cooldown"},{"datum":"2026-05-08","sportart":"Joggen","distanz":0.678,"minuten":5,"sekunden":3,"pulsVon":78,"pulsBis":134,"pulsDurchschnitt":125,"aktivitaetsKalorien":50,"gesamtKalorien":60,"bemerkung":"Warmup"},{"datum":"2026-05-08","sportart":"Joggen","distanz":8.02,"minuten":59,"sekunden":24,"pulsVon":118,"pulsBis":157,"pulsDurchschnitt":143,"aktivitaetsKalorien":626,"gesamtKalorien":741,"bemerkung":"Hauptteil"},{"datum":"2026-05-08","sportart":"Joggen","distanz":0.664,"minuten":7,"sekunden":10,"pulsVon":114,"pulsBis":148,"pulsDurchschnitt":129,"aktivitaetsKalorien":58,"gesamtKalorien":71,"bemerkung":"Cooldown"},{"datum":"2026-05-11","sportart":"Rower","bemerkung":"Warmup","distanz":1.016,"minuten":4,"sekunden":59,"pulsVon":106,"pulsBis":123,"pulsDurchschnitt":116,"aktivitaetsKalorien":45,"gesamtKalorien":55},{"datum":"2026-05-11","sportart":"Rower","bemerkung":"Hauptteil","distanz":6.009,"minuten":25,"sekunden":7,"pulsVon":106,"pulsBis":176,"pulsDurchschnitt":159,"aktivitaetsKalorien":281,"gesamtKalorien":438},{"datum":"2026-05-11","sportart":"Rower","bemerkung":"Cooldown","distanz":0.987,"minuten":6,"sekunden":2,"pulsVon":114,"pulsBis":128,"pulsDurchschnitt":119,"aktivitaetsKalorien":45,"gesamtKalorien":80},{"datum":"2026-05-12","sportart":"Joggen","distanz":2.01,"minuten":14,"sekunden":14,"pulsVon":112,"pulsBis":151,"pulsDurchschnitt":142,"aktivitaetsKalorien":157,"gesamtKalorien":184,"bemerkung":"Warmup"},{"datum":"2026-05-12","sportart":"Joggen","distanz":5.41,"minuten":35,"sekunden":40,"pulsVon":136,"pulsBis":171,"pulsDurchschnitt":156,"aktivitaetsKalorien":447,"gesamtKalorien":516,"bemerkung":"Hauptteil"},{"datum":"2026-05-12","sportart":"Joggen","distanz":1.16,"minuten":10,"sekunden":2,"pulsVon":116,"pulsBis":150,"pulsDurchschnitt":139,"aktivitaetsKalorien":99,"gesamtKalorien":118,"bemerkung":"Cooldown"},{"datum":"2026-05-13","sportart":"Assault Bike","bemerkung":"Warmup","distanz":1.6,"minuten":4,"sekunden":57,"pulsVon":81,"pulsBis":138,"pulsDurchschnitt":132,"aktivitaetsKalorien":40,"gesamtKalorien":48},{"datum":"2026-05-13","sportart":"Assault Bike","bemerkung":"Hauptteil","distanz":10,"minuten":28,"sekunden":48,"pulsVon":132,"pulsBis":171,"pulsDurchschnitt":152,"aktivitaetsKalorien":304,"gesamtKalorien":384},{"datum":"2026-05-13","sportart":"Assault Bike","bemerkung":"Cooldown","distanz":1.4,"minuten":5,"sekunden":4,"pulsVon":116,"pulsBis":147,"pulsDurchschnitt":126,"aktivitaetsKalorien":25,"gesamtKalorien":32},{"datum":"2026-05-14","sportart":"Joggen","distanz":10,"minuten":71,"sekunden":50,"pulsVon":80,"pulsBis":164,"pulsDurchschnitt":152,"aktivitaetsKalorien":870,"gesamtKalorien":1009,"bemerkung":"Hauptteil"},{"datum":"2026-05-18","sportart":"Rower","bemerkung":"Warmup","distanz":1.122,"minuten":5,"sekunden":5,"pulsVon":99,"pulsBis":131,"pulsDurchschnitt":124,"aktivitaetsKalorien":66,"gesamtKalorien":75},{"datum":"2026-05-18","sportart":"Rower","bemerkung":"Hauptteil","distanz":6.094,"minuten":25,"sekunden":10,"pulsVon":107,"pulsBis":172,"pulsDurchschnitt":160,"aktivitaetsKalorien":390,"gesamtKalorien":452},{"datum":"2026-05-18","sportart":"Assault Bike","bemerkung":"Hauptteil","distanz":2.1,"minuten":5,"sekunden":53,"pulsVon":124,"pulsBis":174,"pulsDurchschnitt":157,"aktivitaetsKalorien":63,"gesamtKalorien":72},{"datum":"2026-05-18","sportart":"Assault Bike","bemerkung":"Cooldown","distanz":1.3,"minuten":5,"sekunden":14,"pulsVon":113,"pulsBis":163,"pulsDurchschnitt":124,"aktivitaetsKalorien":22,"gesamtKalorien":26},{"datum":"2026-05-19","sportart":"Joggen","distanz":2.34,"minuten":15,"sekunden":50,"pulsVon":114,"pulsBis":150,"pulsDurchschnitt":140,"aktivitaetsKalorien":187,"gesamtKalorien":218,"bemerkung":"Warmup"},{"datum":"2026-05-19","sportart":"Joggen","distanz":4.76,"minuten":31,"sekunden":6,"pulsVon":131,"pulsBis":173,"pulsDurchschnitt":156,"aktivitaetsKalorien":387,"gesamtKalorien":447,"bemerkung":"Hauptteil"},{"datum":"2026-05-19","sportart":"Joggen","distanz":2,"minuten":16,"sekunden":46,"pulsVon":116,"pulsBis":152,"pulsDurchschnitt":143,"aktivitaetsKalorien":165,"gesamtKalorien":197,"bemerkung":"Cooldown"},{"datum":"2026-05-20","sportart":"Assault Bike","distanz":1.7,"minuten":5,"sekunden":1,"pulsVon":88,"pulsBis":136,"pulsDurchschnitt":110,"aktivitaetsKalorien":46,"gesamtKalorien":53,"bemerkung":"Warmup"},{"datum":"2026-05-20","sportart":"Assault Bike","distanz":9,"minuten":25,"sekunden":3,"pulsVon":101,"pulsBis":162,"pulsDurchschnitt":148,"aktivitaetsKalorien":270,"gesamtKalorien":313,"bemerkung":"Hauptteil"},{"datum":"2026-05-20","sportart":"Assault Bike","distanz":1,"minuten":3,"sekunden":23,"pulsVon":124,"pulsBis":142,"pulsDurchschnitt":129,"aktivitaetsKalorien":22,"gesamtKalorien":26,"bemerkung":"Cooldown"},{"datum":"2026-05-21","sportart":"Rower","distanz":1.101,"minuten":5,"sekunden":6,"pulsVon":69,"pulsBis":118,"pulsDurchschnitt":109,"aktivitaetsKalorien":63,"gesamtKalorien":73,"bemerkung":"Warmup"},{"datum":"2026-05-21","sportart":"Rower","distanz":5.912,"minuten":26,"sekunden":20,"pulsVon":80,"pulsBis":146,"pulsDurchschnitt":135,"aktivitaetsKalorien":353,"gesamtKalorien":409,"bemerkung":"Hauptteil"},{"datum":"2026-05-21","sportart":"Rower","distanz":0.993,"minuten":5,"sekunden":18,"pulsVon":111,"pulsBis":122,"pulsDurchschnitt":116,"aktivitaetsKalorien":50,"gesamtKalorien":58,"bemerkung":"Cooldown"},{"datum":"2026-05-26","sportart":"Joggen","distanz":2.19,"minuten":15,"sekunden":0,"pulsVon":117,"pulsBis":147,"pulsDurchschnitt":136,"aktivitaetsKalorien":170,"gesamtKalorien":199,"bemerkung":"Warmup"},{"datum":"2026-05-26","sportart":"Joggen","distanz":5.63,"minuten":35,"sekunden":12,"pulsVon":131,"pulsBis":167,"pulsDurchschnitt":153,"aktivitaetsKalorien":453,"gesamtKalorien":521,"bemerkung":"Hauptteil"},{"datum":"2026-05-26","sportart":"Joggen","distanz":0.94,"minuten":9,"sekunden":44,"pulsVon":115,"pulsBis":149,"pulsDurchschnitt":128,"aktivitaetsKalorien":77,"gesamtKalorien":96,"bemerkung":"Cooldown"},{"datum":"2026-05-24","sportart":"Joggen","distanz":9.03,"minuten":72,"sekunden":36,"pulsVon":86,"pulsBis":151,"pulsDurchschnitt":139,"aktivitaetsKalorien":714,"gesamtKalorien":854,"bemerkung":"Hauptteil"},{"datum":"2026-05-24","sportart":"Joggen","distanz":0.79,"minuten":10,"sekunden":1,"pulsVon":110,"pulsBis":142,"pulsDurchschnitt":119,"aktivitaetsKalorien":65,"gesamtKalorien":85,"bemerkung":"Cooldown"},{"datum":"2026-05-28","sportart":"Rower","distanz":7.016,"minuten":32,"sekunden":24,"pulsVon":87,"pulsBis":134,"pulsDurchschnitt":125,"aktivitaetsKalorien":406,"gesamtKalorien":471,"bemerkung":"Hauptteil"},{"datum":"2026-05-29","sportart":"Assault Bike","distanz":1.6,"minuten":5,"sekunden":0,"pulsVon":88,"pulsBis":116,"pulsDurchschnitt":103,"aktivitaetsKalorien":40,"gesamtKalorien":46,"bemerkung":"Warmup"},{"datum":"2026-05-29","sportart":"Assault Bike","bemerkung":"Hauptteil","distanz":11,"minuten":30,"sekunden":11,"pulsVon":102,"pulsBis":169,"pulsDurchschnitt":147,"aktivitaetsKalorien":339,"gesamtKalorien":393},{"datum":"2026-05-29","sportart":"Assault Bike","distanz":1.3,"minuten":5,"sekunden":0,"pulsVon":107,"pulsBis":129,"pulsDurchschnitt":114,"aktivitaetsKalorien":22,"gesamtKalorien":26,"bemerkung":"Cooldown"},{"datum":"2026-06-01","sportart":"Rower","distanz":8.032,"minuten":35,"sekunden":5,"pulsVon":131,"pulsBis":168,"pulsDurchschnitt":149,"aktivitaetsKalorien":488,"gesamtKalorien":566,"bemerkung":"Hauptteil"},{"datum":"2026-06-01","sportart":"Assault Bike","distanz":3,"minuten":9,"sekunden":46,"pulsVon":120,"pulsBis":140,"pulsDurchschnitt":131,"aktivitaetsKalorien":69,"gesamtKalorien":80,"bemerkung":"Hauptteil"},{"datum":"2026-06-01","sportart":"Assault Bike","distanz":1,"minuten":3,"sekunden":52,"pulsVon":110,"pulsBis":125,"pulsDurchschnitt":114,"aktivitaetsKalorien":17,"gesamtKalorien":20,"bemerkung":"Cooldown"},{"datum":"2026-06-02","sportart":"Assault Bike","distanz":12,"minuten":33,"sekunden":30,"pulsVon":89,"pulsBis":170,"pulsDurchschnitt":147,"aktivitaetsKalorien":358,"gesamtKalorien":415,"bemerkung":"Hauptteil"},{"datum":"2026-06-02","sportart":"Assault Bike","distanz":2,"minuten":7,"sekunden":15,"pulsVon":117,"pulsBis":158,"pulsDurchschnitt":133,"aktivitaetsKalorien":42,"gesamtKalorien":49,"bemerkung":"Cooldown"},{"datum":"2026-06-03","sportart":"Joggen","distanz":2,"minuten":13,"sekunden":58,"pulsVon":97,"pulsBis":142,"pulsDurchschnitt":133,"aktivitaetsKalorien":155,"gesamtKalorien":182,"bemerkung":"Warmup"},{"datum":"2026-06-03","sportart":"Joggen","distanz":6.52,"minuten":41,"sekunden":3,"pulsVon":129,"pulsBis":173,"pulsDurchschnitt":158,"aktivitaetsKalorien":540,"gesamtKalorien":619,"bemerkung":"Hauptteil"},{"datum":"2026-06-03","sportart":"Joggen","distanz":0.6,"minuten":6,"sekunden":57,"pulsVon":113,"pulsBis":167,"pulsDurchschnitt":134,"aktivitaetsKalorien":53,"gesamtKalorien":66,"bemerkung":"Cooldown"},{"datum":"2026-06-06","sportart":"Joggen","distanz":11,"minuten":81,"sekunden":26,"pulsVon":102,"pulsBis":175,"pulsDurchschnitt":151,"aktivitaetsKalorien":984,"gesamtKalorien":1141,"bemerkung":"Hauptteil"},{"datum":"2026-06-06","sportart":"Joggen","distanz":0.25,"minuten":3,"sekunden":25,"pulsVon":120,"pulsBis":151,"pulsDurchschnitt":131,"aktivitaetsKalorien":24,"gesamtKalorien":30,"bemerkung":"Cooldown"},{"datum":"2026-06-08","sportart":"Rower","distanz":6.132,"minuten":25,"sekunden":54,"pulsVon":115,"pulsBis":174,"pulsDurchschnitt":158,"aktivitaetsKalorien":385,"gesamtKalorien":447,"bemerkung":"Hauptteil"},{"datum":"2026-06-08","sportart":"Assault Bike","distanz":4,"minuten":11,"sekunden":21,"pulsVon":117,"pulsBis":170,"pulsDurchschnitt":159,"aktivitaetsKalorien":121,"gesamtKalorien":140,"bemerkung":"Hauptteil"},{"datum":"2026-06-08","sportart":"Assault Bike","distanz":1.4,"minuten":5,"sekunden":25,"pulsVon":116,"pulsBis":163,"pulsDurchschnitt":130,"aktivitaetsKalorien":28,"gesamtKalorien":32,"bemerkung":"Cooldown"},{"datum":"2026-06-09","sportart":"Assault Bike","distanz":12,"minuten":35,"sekunden":36,"pulsVon":85,"pulsBis":144,"pulsDurchschnitt":129,"aktivitaetsKalorien":318,"gesamtKalorien":369,"bemerkung":"Regeneration"},{"datum":"2026-06-10","sportart":"Joggen","distanz":2.09,"minuten":14,"sekunden":14,"pulsVon":100,"pulsBis":148,"pulsDurchschnitt":137,"aktivitaetsKalorien":163,"gesamtKalorien":191,"bemerkung":"Warmup"},{"datum":"2026-06-10","sportart":"Joggen","distanz":5.23,"minuten":31,"sekunden":39,"pulsVon":132,"pulsBis":180,"pulsDurchschnitt":160,"aktivitaetsKalorien":422,"gesamtKalorien":483,"bemerkung":"Hauptteil"},{"datum":"2026-06-10","sportart":"Joggen","distanz":1,"minuten":9,"sekunden":44,"pulsVon":115,"pulsBis":164,"pulsDurchschnitt":142,"aktivitaetsKalorien":88,"gesamtKalorien":107,"bemerkung":"Cooldown"},{"datum":"2026-06-11","sportart":"Rower","distanz":10,"minuten":45,"sekunden":1,"pulsVon":82,"pulsBis":159,"pulsDurchschnitt":137,"aktivitaetsKalorien":590,"gesamtKalorien":684,"bemerkung":"Regeneration"},{"datum":"2026-06-15","sportart":"Rower","distanz":1.025,"minuten":4,"sekunden":25,"pulsVon":77,"pulsBis":133,"pulsDurchschnitt":123,"aktivitaetsKalorien":63,"gesamtKalorien":73,"bemerkung":"Warmup"},{"datum":"2026-06-15","sportart":"Rower","distanz":6.285,"minuten":25,"sekunden":37,"pulsVon":112,"pulsBis":172,"pulsDurchschnitt":160,"aktivitaetsKalorien":408,"gesamtKalorien":473,"bemerkung":"Hauptteil"},{"datum":"2026-06-15","sportart":"Assault Bike","distanz":3.6,"minuten":10,"sekunden":6,"pulsVon":126,"pulsBis":173,"pulsDurchschnitt":159,"aktivitaetsKalorien":111,"gesamtKalorien":129,"bemerkung":"Hauptteil"},{"datum":"2026-06-15","sportart":"Assault Bike","distanz":2.7,"minuten":10,"sekunden":2,"pulsVon":112,"pulsBis":143,"pulsDurchschnitt":123,"aktivitaetsKalorien":48,"gesamtKalorien":56,"bemerkung":"Cooldown"},{"datum":"2026-06-17","sportart":"Joggen","distanz":2.53,"minuten":17,"sekunden":3,"pulsVon":103,"pulsBis":142,"pulsDurchschnitt":134,"aktivitaetsKalorien":196,"gesamtKalorien":228,"bemerkung":"Warmup"},{"datum":"2026-06-17","sportart":"Joggen","distanz":5,"minuten":29,"sekunden":47,"pulsVon":131,"pulsBis":180,"pulsDurchschnitt":158,"aktivitaetsKalorien":406,"gesamtKalorien":463,"bemerkung":"Hauptteil"},{"datum":"2026-06-17","sportart":"Joggen","distanz":2.01,"minuten":14,"sekunden":7,"pulsVon":139,"pulsBis":165,"pulsDurchschnitt":157,"aktivitaetsKalorien":165,"gesamtKalorien":193,"bemerkung":"Hauptteil"},{"datum":"2026-06-17","sportart":"Joggen","distanz":0.433,"minuten":5,"sekunden":46,"pulsVon":116,"pulsBis":159,"pulsDurchschnitt":130,"aktivitaetsKalorien":37,"gesamtKalorien":49,"bemerkung":"Cooldown"},{"datum":"2026-06-18","sportart":"Rower","distanz":5.015,"minuten":22,"sekunden":9,"pulsVon":72,"pulsBis":144,"pulsDurchschnitt":129,"aktivitaetsKalorien":301,"gesamtKalorien":349,"bemerkung":"Regeneration"},{"datum":"2026-06-18","sportart":"Assault Bike","distanz":4,"minuten":12,"sekunden":34,"pulsVon":106,"pulsBis":146,"pulsDurchschnitt":130,"aktivitaetsKalorien":100,"gesamtKalorien":116,"bemerkung":"Regeneration"},{"datum":"2026-06-19","sportart":"Joggen","distanz":7.8,"minuten":62,"sekunden":40,"pulsVon":86,"pulsBis":176,"pulsDurchschnitt":158,"aktivitaetsKalorien":736,"gesamtKalorien":857,"bemerkung":"Hauptteil"},{"datum":"2026-06-22","sportart":"Joggen","distanz":5,"minuten":25,"sekunden":42,"pulsVon":76,"pulsBis":139,"pulsDurchschnitt":131,"aktivitaetsKalorien":227,"gesamtKalorien":277,"bemerkung":"Hauptteil"},{"datum":"2026-06-23","sportart":"Rower","distanz":6.013,"minuten":25,"sekunden":27,"pulsVon":68,"pulsBis":148,"pulsDurchschnitt":136,"aktivitaetsKalorien":374,"gesamtKalorien":434,"bemerkung":"Hauptteil"},{"datum":"2026-06-23","sportart":"Assault Bike","distanz":3.8,"minuten":12,"sekunden":1,"pulsVon":99,"pulsBis":148,"pulsDurchschnitt":129,"aktivitaetsKalorien":100,"gesamtKalorien":116,"bemerkung":"Hauptteil"}];
+      localStorage.setItem('trainingsEntries', JSON.stringify(preloadedData));
+      localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
+      entries = preloadedData;
+      console.log('✅ Vorgeladene Daten eingespielt:', preloadedData.length, 'Einträge');
+      return;
+    }
+    
+    const stored = localStorage.getItem('trainingsEntries');
+    if (stored) {
+      entries = JSON.parse(stored);
+      console.log('✓ Daten geladen:', entries.length, 'Einträge');
+    } else {
+      entries = [];
+    }
+  } catch(e) {
+    console.error('Fehler beim Laden der Daten:', e);
+    entries = [];
+  }
+}
+
+function updateDebugInfo() {
+  const debugStatus = document.getElementById('debugStatus');
+  if (!debugStatus) return;
+  
+  try {
+    const stored = localStorage.getItem('trainingsEntries');
+    const count = stored ? JSON.parse(stored).length : 0;
+    const lsWorks = localStorage.getItem('__test__') !== undefined || true;
+    
+    let status = '✅ localStorage: OK | ';
+    status += '📊 Einträge: ' + count + ' | ';
+    status += '💾 Zuletzt: ' + new Date().toLocaleTimeString('de-DE');
+    
+    debugStatus.textContent = status;
+    debugStatus.style.color = '#86efac';
+  } catch(e) {
+    debugStatus.textContent = '❌ FEHLER: localStorage funktioniert nicht! ' + e.message;
+    debugStatus.style.color = '#fca5a5';
+  }
+}
+
+function saveData() {
+  try {
+    localStorage.setItem('trainingsEntries', JSON.stringify(entries));
+    syncToFirebase();
+    console.log('✓ Daten gespeichert:', entries.length, 'Einträge');
+    updateDebugInfo();
+  } catch(e) {
+    console.error('Fehler beim Speichern der Daten:', e);
+    alert('⚠️ Daten konnten nicht gespeichert werden! (localStorage voll?)');
+    updateDebugInfo();
+  }
+}
+
+function getToday() {
+  const today = new Date();
+  return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+}
+
+function formatDateFromISO(isoDateStr) {
+  const parts = isoDateStr.split('-');
+  if (parts.length === 3) return parts[2] + '.' + parts[1] + '.' + parts[0];
+  return isoDateStr;
+}
+
+function parseDate(dateStr) {
+  const [year, month, day] = dateStr.split('-');
+  return new Date(year, parseInt(month) - 1, parseInt(day));
+}
+
+function getWeekStart() {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const ws = new Date(today.setDate(diff));
+  return ws.getFullYear() + '-' + String(ws.getMonth() + 1).padStart(2, '0') + '-' + String(ws.getDate()).padStart(2, '0');
+}
+
+function getWeekEnd() {
+  const ws = parseDate(getWeekStart());
+  const we = new Date(ws);
+  we.setDate(we.getDate() + 6);
+  return we.getFullYear() + '-' + String(we.getMonth() + 1).padStart(2, '0') + '-' + String(we.getDate()).padStart(2, '0');
+}
+
+function getTodayData() { return entries.filter(e => e.datum === getToday()); }
+function getWeekData() {
+  const ws = parseDate(getWeekStart());
+  const we = parseDate(getWeekEnd());
+  return entries.filter(e => {
+    const ed = parseDate(e.datum);
+    return ed >= ws && ed <= we;
+  });
+}
+
+function getMonthData() {
+  const today = new Date();
+  return entries.filter(e => {
+    const ed = parseDate(e.datum);
+    return ed.getMonth() === today.getMonth() && ed.getFullYear() === today.getFullYear();
+  });
+}
+
+function getYearData() {
+  const today = new Date();
+  return entries.filter(e => {
+    const ed = parseDate(e.datum);
+    return ed.getFullYear() === today.getFullYear();
+  });
+}
+
+function parseLocalFloat(value) {
+  // Konvertiert Komma zu Punkt für parseFloat
+  if (typeof value === 'string') {
+    return parseFloat(value.replace(',', '.'));
+  }
+  return parseFloat(value || 0);
+}
+
+function calculateStats(data) {
+  const count = data.length;
+  const dist = data.reduce((s, e) => s + parseLocalFloat(e.distanz || 0), 0).toFixed(1);
+  const aktKal = data.reduce((s, e) => s + parseInt(e.aktivitaetsKalorien || 0), 0);
+  const gesamtKal = data.reduce((s, e) => s + parseInt(e.gesamtKalorien || 0), 0);
+  return { count, dist, aktKal, gesamtKal };
+}
+
+function renderAnalysis() {
+  const container = document.getElementById('analysisBoxes');
+  let html = '';
+
+  const todayData = getTodayData();
+  const todayStats = calculateStats(todayData);
+  
+  html += '<div class="overview-box today-highlight">';
+  html += '<div class="overview-box-title">Heute</div>';
+  html += '<div class="overview-box-content">';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Trainings:</div><div class="overview-box-value">' + todayStats.count + '</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Distanz:</div><div class="overview-box-value">' + todayStats.dist + ' km</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Aktivitätskcal:</div><div class="overview-box-value">' + todayStats.aktKal + ' kcal</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Gesamtkcal:</div><div class="overview-box-value">' + todayStats.gesamtKal + ' kcal</div></div>';
+  html += '</div></div>';
+
+  const weekData = getWeekData();
+  const weekStats = calculateStats(weekData);
+  
+  html += '<div class="overview-box">';
+  html += '<div class="overview-box-title">Diese Woche</div>';
+  html += '<div class="overview-box-content">';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Trainings:</div><div class="overview-box-value">' + weekStats.count + '</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Distanz:</div><div class="overview-box-value">' + weekStats.dist + ' km</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Aktivitätskcal:</div><div class="overview-box-value">' + weekStats.aktKal + ' kcal</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Gesamtkcal:</div><div class="overview-box-value">' + weekStats.gesamtKal + ' kcal</div></div>';
+  html += '</div></div>';
+
+  const monthData = getMonthData();
+  const monthStats = calculateStats(monthData);
+  
+  html += '<div class="overview-box">';
+  html += '<div class="overview-box-title">Dieser Monat</div>';
+  html += '<div class="overview-box-content">';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Trainings:</div><div class="overview-box-value">' + monthStats.count + '</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Distanz:</div><div class="overview-box-value">' + monthStats.dist + ' km</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Aktivitätskcal:</div><div class="overview-box-value">' + monthStats.aktKal + ' kcal</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Gesamtkcal:</div><div class="overview-box-value">' + monthStats.gesamtKal + ' kcal</div></div>';
+  html += '</div></div>';
+
+  const yearData = getYearData();
+  const yearStats = calculateStats(yearData);
+  
+  html += '<div class="overview-box">';
+  html += '<div class="overview-box-title">Dieses Jahr</div>';
+  html += '<div class="overview-box-content">';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Trainings:</div><div class="overview-box-value">' + yearStats.count + '</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Distanz:</div><div class="overview-box-value">' + yearStats.dist + ' km</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Aktivitätskcal:</div><div class="overview-box-value">' + yearStats.aktKal + ' kcal</div></div>';
+  html += '<div class="overview-box-row"><div class="overview-box-label">Gesamtkcal:</div><div class="overview-box-value">' + yearStats.gesamtKal + ' kcal</div></div>';
+  html += '</div></div>';
+
+  container.innerHTML = html;
+}
+
+function parseDate(dateStr) {
+  const [year, month, day] = dateStr.split('-');
+  return new Date(year, parseInt(month) - 1, parseInt(day));
+}
+
+function getComparableEntries(entry) {
+  // Finde ähnliche Trainings (gleiche Sportart, aber vor diesem Datum)
+  return entries.filter(e => 
+    e.sportart === entry.sportart && 
+    new Date(e.datum) < new Date(entry.datum)
+  ).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+}
+
+function getEntriesForDay(datum) {
+  // Alle Trainings an einem bestimmten Tag
+  return entries.filter(e => e.datum === datum);
+}
+
+function getPreviousDayWithTraining(datum) {
+  // Finde den vorherigen Tag mit Trainings
+  const currentDate = new Date(datum);
+  let checkDate = new Date(currentDate);
+  checkDate.setDate(checkDate.getDate() - 1);
+  
+  while (checkDate.getFullYear() > 2020) {
+    const checkDateStr = checkDate.getFullYear() + '-' + 
+                         String(checkDate.getMonth() + 1).padStart(2, '0') + '-' +
+                         String(checkDate.getDate()).padStart(2, '0');
+    const dayEntries = getEntriesForDay(checkDateStr);
+    if (dayEntries.length > 0) {
+      return { date: checkDateStr, entries: dayEntries };
+    }
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+  return null;
+}
+
+function calculateTempo(distanz, minuten, sekunden) {
+  if (!distanz || distanz <= 0) return '-';
+  const totalMinuten = minuten + (sekunden / 60);
+  const tempo = totalMinuten / distanz;
+  
+  // Konvertiere zu Minuten:Sekunden
+  const tempoMinuten = Math.floor(tempo);
+  const tempoSekunden = Math.round((tempo - tempoMinuten) * 60);
+  
+  return tempoMinuten + ':' + (tempoSekunden < 10 ? '0' : '') + tempoSekunden + ' min/km';
+}
+
+function calculateTempoValue(distanz, minuten, sekunden) {
+  if (!distanz || distanz <= 0) return Infinity;
+  const totalMinuten = minuten + (sekunden / 60);
+  return totalMinuten / distanz;
+}
+
+function checkNewRecords(entry, comparable) {
+  const records = [];
+  
+  if (comparable.length === 0) return records;
+  
+  const currentTempo = calculateTempo(entry.distanz, entry.minuten, entry.sekunden);
+  const bestTempo = Math.min(...comparable.map(c => calculateTempo(c.distanz, c.minuten, c.sekunden)));
+  
+  // Schnellste Zeit
+  if ((entry.sportart === 'Joggen' || entry.sportart === 'Rower' || entry.sportart === 'Assault Bike') && 
+      currentTempo < bestTempo) {
+    records.push('🥇');
+  }
+  
+  // Längste Distanz
+  const maxDist = Math.max(...comparable.map(c => c.distanz));
+  if (entry.distanz > maxDist) {
+    records.push('🥇');
+  }
+  
+  // Meiste Kalorien
+  const maxKal = Math.max(...comparable.map(c => c.aktivitaetsKalorien));
+  if (entry.aktivitaetsKalorien > maxKal) {
+    records.push('🔥');
+  }
+  
+  // Höchster Puls
+  const maxPuls = Math.max(...comparable.map(c => c.pulsBis || 0));
+  if ((entry.pulsBis || 0) > maxPuls) {
+    records.push('💓');
+  }
+  
+  return records;
+}
+
+function rateTraining(entry) {
+  // Warmup, Cooldown und Regeneration nicht bewerten
+  if (entry.bemerkung === 'Warmup' || entry.bemerkung === 'Cooldown' || entry.bemerkung === 'Regeneration') {
+    return {
+      stars: '🟢 OK',
+      comparison: entry.bemerkung + ' absolviert',
+      optimization: '',
+      records: []
+    };
+  }
+  
+  // Kombiniere alle "Hauptteil"-Trainings des gleichen Tages
+  const dayEntries = getEntriesForDay(entry.datum).filter(e => e.bemerkung === 'Hauptteil');
+  
+  if (dayEntries.length === 0) {
+    return {
+      stars: '⭐⭐⭐',
+      comparison: 'Erstes Hauptteil-Training',
+      optimization: 'Weiter so!',
+      records: []
+    };
+  }
+  
+  const totalDayDist = dayEntries.reduce((sum, e) => sum + e.distanz, 0);
+  const totalDayMin = dayEntries.reduce((sum, e) => sum + e.minuten, 0);
+  const totalDaySec = dayEntries.reduce((sum, e) => sum + e.sekunden, 0);
+  const totalDayKal = dayEntries.reduce((sum, e) => sum + e.aktivitaetsKalorien, 0);
+  const avgDayPuls = Math.round(dayEntries.reduce((sum, e) => sum + (e.pulsDurchschnitt || 0), 0) / dayEntries.length);
+  
+  // Vergleich mit vorherigem Trainingstag (nur Hauptteil)
+  const prevDay = getPreviousDayWithTraining(entry.datum);
+  
+  if (!prevDay) {
+    return {
+      stars: '⭐⭐⭐',
+      comparison: 'Erstes Hauptteil-Training',
+      optimization: 'Weiter so!',
+      records: []
+    };
+  }
+  
+  const prevDayEntries = prevDay.entries.filter(e => e.bemerkung === 'Hauptteil');
+  if (prevDayEntries.length === 0) {
+    return {
+      stars: '⭐⭐⭐',
+      comparison: 'Erstes Hauptteil-Training an diesem Tag',
+      optimization: 'Weiter so!',
+      records: []
+    };
+  }
+  
+  const prevDayDist = prevDayEntries.reduce((sum, e) => sum + e.distanz, 0);
+  const prevDayMin = prevDayEntries.reduce((sum, e) => sum + e.minuten, 0);
+  const prevDaySec = prevDayEntries.reduce((sum, e) => sum + e.sekunden, 0);
+  const prevDayKal = prevDayEntries.reduce((sum, e) => sum + e.aktivitaetsKalorien, 0);
+  
+  const prevDayTotalMin = prevDayMin + (prevDaySec / 60);
+  const currentDayTotalMin = totalDayMin + (totalDaySec / 60);
+  
+  const distImprovement = ((totalDayDist - prevDayDist) / prevDayDist) * 100;
+  const timeImprovement = ((prevDayTotalMin - currentDayTotalMin) / prevDayTotalMin) * 100;
+  const kalImprovement = ((totalDayKal - prevDayKal) / prevDayKal) * 100;
+  
+  let stars = '⭐⭐⭐';
+  let comparison = '';
+  let optimization = '';
+  
+  // Bewertung auf Hauptteil-Basis
+  if (distImprovement > 5 || timeImprovement > 5 || kalImprovement > 10) {
+    stars = '⭐⭐⭐⭐⭐';
+    comparison = `Hauptteil: +${Math.abs(distImprovement).toFixed(1)}%`;
+  } else if (distImprovement > 2 || timeImprovement > 2 || kalImprovement > 5) {
+    stars = '⭐⭐⭐⭐';
+    comparison = `Hauptteil: ↑ Leichte Verbesserung`;
+  } else if (Math.abs(distImprovement) < 2 && Math.abs(timeImprovement) < 2) {
+    stars = '⭐⭐⭐';
+    comparison = 'Hauptteil: → Konstantes Niveau';
+  } else if (distImprovement < -5 || timeImprovement < -5) {
+    stars = '⭐⭐';
+    comparison = `Hauptteil: ↓ Schwächer als vorher`;
+  } else {
+    stars = '⭐⭐⭐';
+    comparison = 'Hauptteil: → Solider Tag';
+  }
+  
+  // Optimierungsvorschlag
+  const avgPulsPercent = (avgDayPuls / 193) * 100;
+  if (avgPulsPercent < 65) {
+    optimization = '💡 Könnte intensiver sein';
+  } else if (avgPulsPercent > 85 && distImprovement < -5) {
+    optimization = '💡 Hoher Puls aber schwächer';
+  } else if (kalImprovement < -10) {
+    optimization = '💡 Weniger Kalorien - Tempo?';
+  } else if (timeImprovement > 5 && avgPulsPercent < 75) {
+    optimization = '💡 Schneller UND effizienter!';
+  }
+  
+  const records = checkNewRecords(entry, getComparableEntries(entry));
+  
+  return {
+    stars,
+    comparison,
+    optimization,
+    records
+  };
+}
+
+
+function renderTable() {
+  const tableBody = document.getElementById('tableBody');
+  
+  // Sortiere: aktuelle Woche zuerst (neueste), dann ältere
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset Zeit auf 00:00:00
+  
+  // Berechne Wochenanfang (Montag)
+  const weekStart = new Date(today);
+  const dayOfWeek = today.getDay();
+  const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+  weekStart.setDate(diff);
+  
+  // Wochenende (Sonntag)
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  
+  // Teile Einträge in aktuelle Woche und älter
+  const currentWeekEntries = entries.filter(e => {
+    const d = parseDate(e.datum);
+    d.setHours(0, 0, 0, 0);
+    return d >= weekStart && d <= weekEnd;
+  }).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  
+  const olderEntries = entries.filter(e => {
+    const d = parseDate(e.datum);
+    d.setHours(0, 0, 0, 0);
+    return d < weekStart;
+  }).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  
+  if (entries.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 2rem; color: #6b7280;">Noch keine Einträge vorhanden</td></tr>';
+    document.getElementById('paginationContainer').style.display = 'none';
+    return;
+  }
+  
+  // Spezial-Paginierung:
+  // Seite 1 = komplett aktuelle Woche
+  // Seite 2+ = ältere Einträge mit 10er Paginierung
+  let pageEntries = [];
+  const itemsPerPage = 10;
+  let totalPages;
+  
+  if (currentPage === 1) {
+    // Seite 1: komplette aktuelle Woche
+    pageEntries = currentWeekEntries;
+    totalPages = Math.ceil((currentWeekEntries.length + olderEntries.length) / itemsPerPage) || 1;
+    // Wenn es nur aktuelle Woche gibt
+    if (olderEntries.length === 0) {
+      totalPages = 1;
+    } else {
+      // Wenn es ältere gibt, brauchst du min. 2 Seiten
+      totalPages = Math.max(2, Math.ceil(olderEntries.length / itemsPerPage) + 1);
+    }
+  } else {
+    // Seite 2+: ältere Einträge mit 10er Paginierung
+    const olderPage = currentPage - 2; // Seite 2 = Index 0 der älteren
+    const startIdx = olderPage * itemsPerPage;
+    pageEntries = olderEntries.slice(startIdx, startIdx + itemsPerPage);
+    totalPages = Math.max(1, Math.ceil(olderEntries.length / itemsPerPage) + 1);
+  }
+  
+  currentPage = Math.min(currentPage || 1, totalPages || 1);
+  
+  tableBody.innerHTML = '';
+  
+  pageEntries.forEach((entry) => {
+    const realIdx = entries.indexOf(entry);
+    const badge = 'badge-' + entry.sportart.toLowerCase().replace(' ', '');
+    const pulsText = entry.pulsVon + '-' + entry.pulsBis + ' bpm';
+    const avgPulsText = entry.pulsDurchschnitt ? entry.pulsDurchschnitt + ' bpm' : '-';
+    const bemerkung = entry.bemerkung || '-';
+    const timeStr = entry.minuten + ':' + (entry.sekunden < 10 ? '0' : '') + entry.sekunden;
+    const tempo = calculateTempo(entry.distanz, entry.minuten, entry.sekunden);
+    
+    // Bewertung
+    const rating = rateTraining(entry);
+    let ratingHtml = rating.stars;
+    if (rating.records.length > 0) {
+      ratingHtml += '<div style="font-size: 11px; margin-top: 4px;">' + rating.records.join(' ') + '</div>';
+    }
+    if (rating.optimization) {
+      ratingHtml += '<div style="font-size: 10px; color: #6b7280; margin-top: 4px; border-top: 1px solid #e5e7eb; padding-top: 4px;">' + rating.optimization + '</div>';
+    }
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td data-label="Datum">${formatDateFromISO(entry.datum)}</td>
+      <td data-label="Sportart"><span class="sport-badge ${badge}">${entry.sportart}</span></td>
+      <td data-label="Abschnitt">${bemerkung}</td>
+      <td data-label="Distanz">${entry.distanz} km</td>
+      <td data-label="Zeit">${timeStr} min</td>
+      <td data-label="Tempo">${tempo}</td>
+      <td data-label="Puls">${pulsText}</td>
+      <td data-label="Ø Puls"><strong>${avgPulsText}</strong></td>
+      <td data-label="Akt.kcal">${entry.aktivitaetsKalorien}</td>
+      <td data-label="Ges.kcal">${entry.gesamtKalorien}</td>
+      <td data-label="Bewertung" style="font-size: 12px; vertical-align: top;">${ratingHtml}</td>
+      <td><button class="edit-btn" onclick="openEditModal(${realIdx})" title="Bearbeiten">✎</button><button class="delete-btn" onclick="deleteEntry(${realIdx})" title="Löschen">✕</button></td>
+    `;
+    tableBody.appendChild(row);
+  });
+  
+  const paginationContainer = document.getElementById('paginationContainer');
+  if (totalPages > 1) {
+    paginationContainer.style.display = 'flex';
+    document.getElementById('currentPage').textContent = currentPage;
+    document.getElementById('totalPages').textContent = totalPages;
+    document.getElementById('prevBtn').disabled = currentPage === 1;
+    document.getElementById('nextBtn').disabled = currentPage === totalPages;
+  } else {
+    paginationContainer.style.display = 'none';
+  }
+}
+
+function renderSports() {
+  const container = document.getElementById('sportsOverview');
+  const sports = ['Joggen', 'Rower', 'Assault Bike', 'Fitness Training'];
+  const icons = { 'Joggen': '🏃', 'Rower': '🚣', 'Assault Bike': '🚴', 'Fitness Training': '💪' };
+  const classes = { 'Joggen': 'joggen', 'Rower': 'rower', 'Assault Bike': 'bike', 'Fitness Training': 'kraft' };
+  
+  let html = '';
+  
+  sports.forEach(sport => {
+    const sportEntries = entries.filter(e => e.sportart === sport);
+    if (sportEntries.length === 0) return;
+    
+    const stats = calculateStats(sportEntries);
+    const avgDist = (stats.dist / stats.count).toFixed(1);
+    
+    let totalMinuten = 0;
+    let totalSekunden = 0;
+    sportEntries.forEach(e => {
+      totalMinuten += parseInt(e.minuten || 0);
+      totalSekunden += parseInt(e.sekunden || 0);
+    });
+    totalMinuten += Math.floor(totalSekunden / 60);
+    totalSekunden = totalSekunden % 60;
+    
+    // Umrechnung in Stunden und verbleibende Minuten
+    const totalStunden = Math.floor(totalMinuten / 60);
+    const totalMinutenRest = totalMinuten % 60;
+    
+    const avgTime = Math.round((totalMinuten * 60 + totalSekunden) / stats.count);
+    const avgTimeMin = Math.floor(avgTime / 60);
+    const avgTimeSek = avgTime % 60;
+    
+    let minPuls = 999;
+    let maxPuls = 0;
+    sportEntries.forEach(e => {
+      minPuls = Math.min(minPuls, parseInt(e.pulsVon || 999));
+      maxPuls = Math.max(maxPuls, parseInt(e.pulsBis || 0));
+    });
+    
+    const avgKalProTraining = Math.round(stats.aktKal / stats.count);
+    
+    html += '<div class="sport-card ' + classes[sport] + '">';
+    html += '<div class="sport-card-header">';
+    html += '<div class="sport-card-icon">' + icons[sport] + '</div>';
+    html += '<div class="sport-card-name">' + sport + '</div>';
+    html += '</div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">' + stats.count + '× Trainings</div><div class="sport-card-value">' + stats.dist + ' km</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Ø Distanz</div><div class="sport-card-value">' + avgDist + ' km</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Gesamtzeit</div><div class="sport-card-value">' + totalStunden + 'h ' + totalMinutenRest + 'm</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Ø Zeit/Training</div><div class="sport-card-value">' + avgTimeMin + ':' + (avgTimeSek < 10 ? '0' : '') + avgTimeSek + ' min</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Pulsbereich</div><div class="sport-card-value">' + minPuls + '-' + maxPuls + ' bpm</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Aktivitätskcal</div><div class="sport-card-value">' + stats.aktKal + ' kcal</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Gesamtkcal</div><div class="sport-card-value">' + stats.gesamtKal + ' kcal</div></div>';
+    html += '<div class="sport-card-row"><div class="sport-card-label">Ø kcal/Training</div><div class="sport-card-value">' + avgKalProTraining + ' kcal</div></div>';
+    html += '</div>';
+  });
+  
+  if (!html) html = '<div style="grid-column: 1 / -1; text-align: center; color: #6b7280; padding: 2rem;">Noch keine Trainingseinträge vorhanden</div>';
+  
+  container.innerHTML = html;
+}
+
+
+function getDailyStats(sport) {
+  // Gruppiere Einträge nach Datum und Sportart
+  const dailyStats = {};
+  
+  entries.forEach(e => {
+    if (e.sportart !== sport) return;
+    
+    const key = e.datum; // Datum als Schlüssel
+    if (!dailyStats[key]) {
+      dailyStats[key] = {
+        datum: e.datum,
+        sportart: sport,
+        distanz: 0,
+        minuten: 0,
+        sekunden: 0,
+        aktivitaetsKalorien: 0,
+        gesamtKalorien: 0,
+        pulsBis: 0,
+        pulsVon: 0,
+        entries: []
+      };
+    }
+    
+    // Addiere Werte für den Tag
+    dailyStats[key].distanz += parseLocalFloat(e.distanz);
+    dailyStats[key].minuten += parseInt(e.minuten || 0);
+    dailyStats[key].sekunden += parseInt(e.sekunden || 0);
+    dailyStats[key].aktivitaetsKalorien += parseInt(e.aktivitaetsKalorien || 0);
+    dailyStats[key].gesamtKalorien += parseInt(e.gesamtKalorien || 0);
+    dailyStats[key].pulsBis = Math.max(dailyStats[key].pulsBis, parseInt(e.pulsBis || 0));
+    dailyStats[key].pulsVon = Math.min(dailyStats[key].pulsVon === 0 ? 999 : dailyStats[key].pulsVon, parseInt(e.pulsVon || 0));
+    dailyStats[key].entries.push(e);
+  });
+  
+  // Konvertiere in Array und sortiere nach Datum (neueste zuerst)
+  return Object.values(dailyStats).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+}
+
+function getHauptteilStats(sport) {
+  // Filtere alles AUSSER "Warmup" und "Cooldown" und gruppiere nach Datum
+  const hauptteilStats = {};
+  
+  entries.forEach(e => {
+    if (e.sportart !== sport) return;
+    // Ignoriere nur Warmup und Cooldown
+    if (e.bemerkung === 'Warmup' || e.bemerkung === 'Cooldown') return;
+    
+    const key = e.datum;
+    if (!hauptteilStats[key]) {
+      hauptteilStats[key] = {
+        datum: e.datum,
+        sportart: sport,
+        distanz: 0,
+        minuten: 0,
+        sekunden: 0,
+        aktivitaetsKalorien: 0,
+        gesamtKalorien: 0,
+        pulsBis: 0,
+        pulsVon: 999
+      };
+    }
+    
+    // Addiere Werte (nur Hauptteil, Regeneration, etc., nicht Warmup/Cooldown!)
+    hauptteilStats[key].distanz += parseLocalFloat(e.distanz);
+    hauptteilStats[key].minuten += parseInt(e.minuten || 0);
+    hauptteilStats[key].sekunden += parseInt(e.sekunden || 0);
+    hauptteilStats[key].aktivitaetsKalorien += parseInt(e.aktivitaetsKalorien || 0);
+    hauptteilStats[key].gesamtKalorien += parseInt(e.gesamtKalorien || 0);
+    hauptteilStats[key].pulsBis = Math.max(hauptteilStats[key].pulsBis, parseInt(e.pulsBis || 0));
+    hauptteilStats[key].pulsVon = Math.min(hauptteilStats[key].pulsVon, parseInt(e.pulsVon || 0));
+  });
+  
+  return Object.values(hauptteilStats).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+}
+
+function formatDurationDisplay(totalMinuten, totalSekunden) {
+  // Normalisiere zuerst
+  totalMinuten += Math.floor(totalSekunden / 60);
+  totalSekunden = totalSekunden % 60;
+  
+  // Konvertiere zu Stunden:Minuten
+  const stunden = Math.floor(totalMinuten / 60);
+  const minuten = totalMinuten % 60;
+  
+  return stunden + 'h ' + minuten + 'm';
+}
+
+function renderTimeBasedRecords() {
+  const container = document.getElementById('timeBasedRecordsContainer');
+  
+  if (entries.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 2rem;">Noch keine Daten</div>';
+    return;
+  }
+  
+  // Daily Stats
+  const dailyStats = {};
+  entries.forEach(entry => {
+    if (!dailyStats[entry.datum]) {
+      dailyStats[entry.datum] = { datum: entry.datum, distanz: 0, aktivKal: 0, minuten: 0, sekunden: 0 };
+    }
+    dailyStats[entry.datum].distanz += parseFloat(entry.distanz || 0);
+    dailyStats[entry.datum].aktivKal += parseInt(entry.aktivitaetsKalorien || 0);
+    dailyStats[entry.datum].minuten += parseInt(entry.minuten || 0);
+    dailyStats[entry.datum].sekunden += parseInt(entry.sekunden || 0);
+  });
+  
+  // Normalisiere Sekunden
+  Object.values(dailyStats).forEach(day => {
+    day.minuten += Math.floor(day.sekunden / 60);
+    day.sekunden = day.sekunden % 60;
+  });
+  
+  // Berechne tägliche Rekorde
+  const maxDayDistanz = Object.values(dailyStats).reduce((max, d) => d.distanz > max.distanz ? d : max);
+  const maxDayKalorien = Object.values(dailyStats).reduce((max, d) => d.aktivKal > max.aktivKal ? d : max);
+  const maxDayDuration = Object.values(dailyStats).reduce((max, d) => {
+    const dMinuten = d.minuten + (d.sekunden / 60);
+    const maxMinuten = max.minuten + (max.sekunden / 60);
+    return dMinuten > maxMinuten ? d : max;
+  });
+  
+  // Weekly Stats
+  const weeklyStats = {};
+  Object.entries(dailyStats).forEach(([datum, dayData]) => {
+    const date = new Date(datum + 'T00:00:00');
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    const y = date.getFullYear();
+    const ms = date.valueOf();
+    const msStart = new Date(y, m - 1, d - date.getDay()).valueOf();
+    const weekKey = y + '-W' + Math.ceil(((ms - msStart) / 86400000 + 1) / 7);
+    
+    if (!weeklyStats[weekKey]) {
+      weeklyStats[weekKey] = { weekKey: weekKey, distanz: 0, aktivKal: 0, minuten: 0, sekunden: 0 };
+    }
+    weeklyStats[weekKey].distanz += dayData.distanz;
+    weeklyStats[weekKey].aktivKal += dayData.aktivKal;
+    weeklyStats[weekKey].minuten += dayData.minuten;
+    weeklyStats[weekKey].sekunden += dayData.sekunden;
+  });
+  
+  Object.values(weeklyStats).forEach(w => {
+    w.minuten += Math.floor(w.sekunden / 60);
+    w.sekunden = w.sekunden % 60;
+  });
+  
+  const maxWeekDistanz = Object.values(weeklyStats).length > 0 ? Object.values(weeklyStats).reduce((max, w) => w.distanz > max.distanz ? w : max) : { weekKey: '-', distanz: 0 };
+  const maxWeekKalorien = Object.values(weeklyStats).length > 0 ? Object.values(weeklyStats).reduce((max, w) => w.aktivKal > max.aktivKal ? w : max) : { weekKey: '-', aktivKal: 0 };
+  const maxWeekDuration = Object.values(weeklyStats).length > 0 ? Object.values(weeklyStats).reduce((max, w) => {
+    const wMinuten = w.minuten + (w.sekunden / 60);
+    const maxMinuten = max.minuten + (max.sekunden / 60);
+    return wMinuten > maxMinuten ? w : max;
+  }) : { weekKey: '-', minuten: 0, sekunden: 0 };
+  
+  // Monthly Stats
+  const monthlyStats = {};
+  Object.entries(dailyStats).forEach(([datum, dayData]) => {
+    const date = new Date(datum + 'T00:00:00');
+    const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+    
+    if (!monthlyStats[monthKey]) {
+      monthlyStats[monthKey] = { monthKey: monthKey, distanz: 0, aktivKal: 0, minuten: 0, sekunden: 0 };
+    }
+    monthlyStats[monthKey].distanz += dayData.distanz;
+    monthlyStats[monthKey].aktivKal += dayData.aktivKal;
+    monthlyStats[monthKey].minuten += dayData.minuten;
+    monthlyStats[monthKey].sekunden += dayData.sekunden;
+  });
+  
+  Object.values(monthlyStats).forEach(m => {
+    m.minuten += Math.floor(m.sekunden / 60);
+    m.sekunden = m.sekunden % 60;
+  });
+  
+  const maxMonthDistanz = Object.values(monthlyStats).length > 0 ? Object.values(monthlyStats).reduce((max, m) => m.distanz > max.distanz ? m : max) : { monthKey: '-', distanz: 0 };
+  const maxMonthKalorien = Object.values(monthlyStats).length > 0 ? Object.values(monthlyStats).reduce((max, m) => m.aktivKal > max.aktivKal ? m : max) : { monthKey: '-', aktivKal: 0 };
+  const maxMonthDuration = Object.values(monthlyStats).length > 0 ? Object.values(monthlyStats).reduce((max, m) => {
+    const mMinuten = m.minuten + (m.sekunden / 60);
+    const maxMinuten = max.minuten + (max.sekunden / 60);
+    return mMinuten > maxMinuten ? m : max;
+  }) : { monthKey: '-', minuten: 0, sekunden: 0 };
+  
+  let html = '<div class="record-item"><div class="record-label">📅 Längste Tagesstrecke</div><div class="record-value">' + maxDayDistanz.distanz.toFixed(1) + ' km</div><div class="record-date">' + maxDayDistanz.datum + '</div></div>';
+  html += '<div class="record-item"><div class="record-label">🔥 Meiste Tages-Kalorien</div><div class="record-value">' + maxDayKalorien.aktivKal + ' kcal</div><div class="record-date">' + maxDayKalorien.datum + '</div></div>';
+  html += '<div class="record-item"><div class="record-label">⏱️ Längste Tagesdauer</div><div class="record-value">' + formatDurationDisplay(maxDayDuration.minuten, maxDayDuration.sekunden) + '</div><div class="record-date">' + maxDayDuration.datum + '</div></div>';
+  
+  html += '<div class="record-item"><div class="record-label">📊 Längste Wochenstrecke</div><div class="record-value">' + maxWeekDistanz.distanz.toFixed(1) + ' km</div><div class="record-date">' + (maxWeekDistanz.weekKey !== '-' ? maxWeekDistanz.weekKey : '-') + '</div></div>';
+  html += '<div class="record-item"><div class="record-label">🔥 Meiste Wochen-Kalorien</div><div class="record-value">' + maxWeekKalorien.aktivKal + ' kcal</div><div class="record-date">' + (maxWeekKalorien.weekKey !== '-' ? maxWeekKalorien.weekKey : '-') + '</div></div>';
+  html += '<div class="record-item"><div class="record-label">⏱️ Längste Wochendauer</div><div class="record-value">' + formatDurationDisplay(maxWeekDuration.minuten, maxWeekDuration.sekunden) + '</div><div class="record-date">' + (maxWeekDuration.weekKey !== '-' ? maxWeekDuration.weekKey : '-') + '</div></div>';
+  
+  html += '<div class="record-item"><div class="record-label">📅 Längste Monatsstrecke</div><div class="record-value">' + maxMonthDistanz.distanz.toFixed(1) + ' km</div><div class="record-date">' + (maxMonthDistanz.monthKey !== '-' ? maxMonthDistanz.monthKey : '-') + '</div></div>';
+  html += '<div class="record-item"><div class="record-label">🔥 Meiste Monats-Kalorien</div><div class="record-value">' + maxMonthKalorien.aktivKal + ' kcal</div><div class="record-date">' + (maxMonthKalorien.monthKey !== '-' ? maxMonthKalorien.monthKey : '-') + '</div></div>';
+  html += '<div class="record-item"><div class="record-label">⏱️ Längste Monatsdauer</div><div class="record-value">' + formatDurationDisplay(maxMonthDuration.minuten, maxMonthDuration.sekunden) + '</div><div class="record-date">' + (maxMonthDuration.monthKey !== '-' ? maxMonthDuration.monthKey : '-') + '</div></div>';
+  
+  container.innerHTML = html;
+}
+
+function renderRecords() {
+  const container = document.getElementById('recordsContainer');
+  const sports = ['Joggen', 'Rower', 'Assault Bike', 'Fitness Training'];
+  const icons = { 'Joggen': '🏃', 'Rower': '🚣', 'Assault Bike': '🚴', 'Fitness Training': '💪' };
+  
+  let html = '';
+  
+  sports.forEach(sport => {
+    const hauptteilStats = getHauptteilStats(sport);
+    if (hauptteilStats.length === 0) return;
+    
+    // Beste Zeit (Tempo pro km) über alle Tage
+    let fastestEntry = null;
+    let fastestTempo = Infinity;
+    hauptteilStats.forEach(day => {
+      const tempo = calculateTempoValue(day.distanz, day.minuten, day.sekunden);
+      if (tempo < fastestTempo) {
+        fastestTempo = tempo;
+        fastestEntry = day;
+      }
+    });
+    
+    // Längste Tagesstrecke (Summe aller Trainings eines Tages)
+    const longestEntry = hauptteilStats.reduce((max, day) => day.distanz > max.distanz ? day : max);
+    
+    // Meiste Tages-Kalorien (Summe aller Trainings eines Tages)
+    const mostCalEntry = hauptteilStats.reduce((max, day) => day.aktivitaetsKalorien > max.aktivitaetsKalorien ? day : max);
+    
+    // Höchster Puls
+    const highestPulsEntry = hauptteilStats.reduce((max, day) => day.pulsBis > max.pulsBis ? day : max);
+    
+    const fastestSeconds = Math.round((fastestTempo % 1) * 60);
+    
+    html += '<div class="record-card">';
+    html += '<div class="record-card-title">' + icons[sport] + ' ' + sport + ' - Rekorde</div>';
+    
+    html += '<div class="record-item">';
+    html += '<div class="record-label"><span class="record-icon">⚡</span>Schnellste Zeit</div>';
+    html += '<div class="record-value">' + Math.floor(fastestTempo) + ':' + (fastestSeconds < 10 ? '0' : '') + fastestSeconds + ' min/km</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item">';
+    html += '<div class="record-label"><span class="record-icon">📅</span>Datum</div>';
+    html += '<div class="record-value">' + formatDateFromISO(fastestEntry.datum) + '</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">';
+    html += '<div class="record-label"><span class="record-icon">📏</span>Längste Tagesstrecke</div>';
+    html += '<div class="record-value">' + longestEntry.distanz.toFixed(2) + ' km</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item">';
+    html += '<div class="record-label"><span class="record-icon">📅</span>Datum</div>';
+    html += '<div class="record-value">' + formatDateFromISO(longestEntry.datum) + '</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">';
+    html += '<div class="record-label"><span class="record-icon">🔥</span>Meiste Tages-Kalorien</div>';
+    html += '<div class="record-value">' + mostCalEntry.aktivitaetsKalorien + ' kcal</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item">';
+    html += '<div class="record-label"><span class="record-icon">📅</span>Datum</div>';
+    html += '<div class="record-value">' + formatDateFromISO(mostCalEntry.datum) + '</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">';
+    html += '<div class="record-label"><span class="record-icon">💓</span>Höchster Puls</div>';
+    html += '<div class="record-value">' + highestPulsEntry.pulsBis + ' bpm</div>';
+    html += '</div>';
+    
+    html += '<div class="record-item">';
+    html += '<div class="record-label"><span class="record-icon">📅</span>Datum</div>';
+    html += '<div class="record-value">' + formatDateFromISO(highestPulsEntry.datum) + '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+  });
+  
+  if (!html) html = '<div style="grid-column: 1 / -1; text-align: center; color: #6b7280; padding: 2rem;">Noch keine Trainingseinträge vorhanden</div>';
+  
+  container.innerHTML = html;
+}
+
+function getTrainingIntensity(entry) {
+  // Berechne Intensität basierend auf Pulsbereich und Aktivitätskalorien
+  const avgPuls = entry.pulsDurchschnitt || ((entry.pulsVon + entry.pulsBis) / 2);
+  const intensitaetProzent = (avgPuls / 193) * 100; // Max-Puls = 193
+  
+  if (intensitaetProzent >= 80) return 'hoch'; // >= 80% = intensiv
+  if (intensitaetProzent >= 70) return 'moderat'; // 70-80% = moderat
+  return 'niedrig'; // < 70% = locker
+}
+
+function getTomorrowDayName(fromDate = null) {
+  const date = fromDate ? new Date(fromDate) : new Date();
+  const tomorrow = new Date(date);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  return days[tomorrow.getDay()];
+}
+
+function generateTrainingRecommendation(lastEntry) {
+  // NUR "Hauptteil"-Einträge berücksichtigen
+  if (lastEntry.bemerkung !== 'Hauptteil') {
+    return null; // Keine Empfehlung für Warmup, Cooldown, Regeneration
+  }
+  
+  // Prüfe ob der nächste Tag in der Zukunft liegt
+  const tomorrowDateObj = new Date(lastEntry.datum);
+  tomorrowDateObj.setDate(tomorrowDateObj.getDate() + 1);
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Setze auf Mitternacht für faire Vergleiche
+  
+  if (tomorrowDateObj < today) {
+    return null; // Keine Empfehlung für vergangene Tage
+  }
+  
+  // Finde alle "Hauptteil"-Trainings vom gleichen Tag
+  const mainTrainings = entries.filter(e => 
+    e.datum === lastEntry.datum && e.bemerkung === 'Hauptteil'
+  );
+  
+  // Berechne kombinierte Metriken aller Hauptteil-Trainings
+  let totalMinuten = 0;
+  let totalSekunden = 0;
+  let avgPulsVon = 0;
+  let avgPulsBis = 0;
+  let totalKalorien = 0;
+  let sports = [];
+  
+  mainTrainings.forEach(t => {
+    totalMinuten += parseInt(t.minuten || 0);
+    totalSekunden += parseInt(t.sekunden || 0);
+    avgPulsVon += parseInt(t.pulsVon || 0);
+    avgPulsBis += parseInt(t.pulsBis || 0);
+    totalKalorien += parseInt(t.aktivitaetsKalorien || 0);
+    sports.push(t.sportart);
+  });
+  
+  totalMinuten += Math.floor(totalSekunden / 60);
+  totalSekunden = totalSekunden % 60;
+  avgPulsVon = Math.round(avgPulsVon / mainTrainings.length);
+  avgPulsBis = Math.round(avgPulsBis / mainTrainings.length);
+  
+  // Bestimme Intensität basierend auf durchschnittlichem Puls
+  const maxPuls = 193;
+  const pulsIntensity = avgPulsBis / maxPuls;
+  let intensity = 'niedrig';
+  if (pulsIntensity > 0.8) intensity = 'hoch';
+  else if (pulsIntensity > 0.65) intensity = 'moderat';
+  
+  const tomorrowDay = getTomorrowDayName(lastEntry.datum);
+  
+  let recommendation = {
+    sport: '',
+    training: '',
+    begründung: '',
+    intensitaet: '',
+    summary: ''
+  };
+  
+  // Zusammenfassung des heutigen Trainings
+  const sportList = [...new Set(sports)].join(' + ');
+  recommendation.summary = `Heute: ${mainTrainings.length}× ${sportList} | ${totalMinuten}h ${totalSekunden}m | Puls: ${avgPulsVon}-${avgPulsBis} bpm | ${totalKalorien} kcal`;
+  
+  // EMPFEHLUNG NACH HOHER INTENSITÄT
+  if (intensity === 'hoch') {
+    if (sports.includes('Rower') && !sports.includes('Assault Bike') && !sports.includes('Joggen')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Joggen',
+        training: 'Lockeres Recovery-Jogging (5–7 km)',
+        begründung: 'Nach intensivem Rudern: Beine aktivieren, aber locker zur Erholung.',
+        intensitaet: 'Niedrig'
+      };
+    } else if (sports.includes('Assault Bike') && !sports.includes('Rower') && !sports.includes('Joggen')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Joggen',
+        training: 'Lockeres Recovery-Jogging (5–7 km)',
+        begründung: 'Nach intensivem Bike: aktive Erholung für die Beine.',
+        intensitaet: 'Niedrig'
+      };
+    } else if (sports.includes('Joggen') && !sports.includes('Rower') && !sports.includes('Assault Bike')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Rower',
+        training: 'Leichtes Rudern (20–25 Min)',
+        begründung: 'Nach intensivem Lauf: Oberkörper trainieren, Beine schonen.',
+        intensitaet: 'Niedrig'
+      };
+    } else {
+      // Mehrere unterschiedliche Sportarten
+      recommendation = {
+        ...recommendation,
+        sport: 'Regeneration',
+        training: 'Leichtes Stretching, Yoga oder Spaziergang',
+        begründung: 'Nach intensivem Ganzkörper-Training: aktive Erholung.',
+        intensitaet: 'Niedrig'
+      };
+    }
+  }
+  
+  // EMPFEHLUNG NACH MODERATER INTENSITÄT
+  else if (intensity === 'moderat') {
+    if (sports.includes('Rower') && !sports.includes('Assault Bike')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Assault Bike',
+        training: 'Moderates Assault Bike (25–30 Min)',
+        begründung: 'Nach moderatem Rudern: Cross-Training auf dem Bike.',
+        intensitaet: 'Moderat'
+      };
+    } else if (sports.includes('Assault Bike') && !sports.includes('Rower')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Rower',
+        training: 'Moderates Rudern (25–30 Min)',
+        begründung: 'Nach moderatem Bike: Oberkörper-Fokus mit Rower.',
+        intensitaet: 'Moderat'
+      };
+    } else if (sports.includes('Joggen') && !sports.includes('Rower') && !sports.includes('Assault Bike')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Assault Bike',
+        training: 'Moderates Assault Bike (25–30 Min)',
+        begründung: 'Nach moderatem Lauf: Cross-Training, andere Muskelgruppen.',
+        intensitaet: 'Moderat'
+      };
+    } else {
+      recommendation = {
+        ...recommendation,
+        sport: 'Rower',
+        training: 'Leichtes bis moderates Rudern (20–25 Min)',
+        begründung: 'Nach gemischtem Training: Oberkörper-Fokus.',
+        intensitaet: 'Moderat'
+      };
+    }
+  }
+  
+  // EMPFEHLUNG NACH NIEDRIGER INTENSITÄT / RECOVERY
+  else {
+    if (sports.includes('Rower')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Joggen',
+        training: 'Moderates Jogging (7–9 km)',
+        begründung: 'Nach leichtem Rudern: Lauf-Training intensivieren.',
+        intensitaet: 'Moderat'
+      };
+    } else if (sports.includes('Assault Bike')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Joggen',
+        training: 'Moderates bis zügiges Jogging (8–10 km)',
+        begründung: 'Nach leichtem Bike: Ausdauer-Lauf.',
+        intensitaet: 'Moderat'
+      };
+    } else if (sports.includes('Joggen')) {
+      recommendation = {
+        ...recommendation,
+        sport: 'Assault Bike',
+        training: 'Moderates Assault Bike (30–35 Min)',
+        begründung: 'Nach leichtem Lauf: Bikes-Training für Ausdauer.',
+        intensitaet: 'Moderat'
+      };
+    }
+  }
+  
+  return recommendation;
+}
+
+function showRecommendationModal(recommendation) {
+  const modal = document.getElementById('recommendationModal');
+  if (!modal) return;
+  
+  const tomorrowDay = getTomorrowDayName();
+  
+  document.getElementById('recommendationTitle').textContent = tomorrowDay + ' – Trainingsempfehlung';
+  document.getElementById('recommendationSport').textContent = recommendation.sport;
+  document.getElementById('recommendationTraining').textContent = recommendation.training;
+  document.getElementById('recommendationBegründung').textContent = recommendation.begründung;
+  document.getElementById('recommendationIntensitaet').textContent = recommendation.intensitaet;
+  
+  // Zeige auch die Zusammenfassung des heutigen Trainings
+  const summaryElement = document.getElementById('recommendationSummary');
+  if (summaryElement) {
+    summaryElement.textContent = recommendation.summary;
+  }
+  
+  // Speichere die aktuelle Empfehlung, um sie später anzuwenden
+  window.currentRecommendation = { day: tomorrowDay, ...recommendation };
+  
+  modal.style.display = 'block';
+}
+
+function closeRecommendationModal() {
+  const modal = document.getElementById('recommendationModal');
+  if (modal) modal.style.display = 'none';
+  window.currentRecommendation = null;
+}
+
+function acceptRecommendation() {
+  if (!window.currentRecommendation) return;
+  
+  const day = window.currentRecommendation.day;
+  const sport = window.currentRecommendation.sport;
+  const training = window.currentRecommendation.training;
+  const intensitaet = window.currentRecommendation.intensitaet;
+  
+  // Aktualisiere den Trainingsplan für den Tag
+  trainingPlan[day] = {
+    training: training,
+    dauer: training.includes('Min') ? training.match(/\d+/)[0] + ' Min' : training.match(/\d+/)[0] + ' km',
+    intensitaet: intensitaet,
+    details: {
+      aufwaermen: 'siehe empfohlenes Training oben',
+      hauptteil: training,
+      cooldown: 'leichtes Auslaufen oder Stretching',
+      pulsbereich: intensitaet === 'Niedrig' ? '130–145 BPM' : intensitaet === 'Moderat' ? '140–160 BPM' : '160–180 BPM',
+      kalorien: intensitaet === 'Niedrig' ? '200–350 kcal' : intensitaet === 'Moderat' ? '300–450 kcal' : '450–600 kcal'
+    }
+  };
+  
+  // Aktualisiere die Sidebar
+  renderTrainingPlan();
+  renderTrainingDetails();
+  
+  closeRecommendationModal();
+  alert('✅ Trainingsplan für ' + day + ' aktualisiert!');
+}
+
+
+function addEntry() {
+  let datum = document.getElementById('datum').value;
+  const sportart = document.getElementById('sportart').value;
+  const distanz = parseLocalFloat(document.getElementById('distanz').value);
+  const minuten = parseInt(document.getElementById('zeit-minuten').value);
+  const sekunden = parseInt(document.getElementById('zeit-sekunden').value) || 0;
+  const pulsVon = parseInt(document.getElementById('puls-von').value);
+  const pulsBis = parseInt(document.getElementById('puls-bis').value);
+  const pulsDurchschnitt = parseInt(document.getElementById('puls-durchschnitt').value);
+  const aktivitaetsKalorien = parseInt(document.getElementById('aktivitaets-kalorien').value);
+  const gesamtKalorien = parseInt(document.getElementById('gesamt-kalorien').value);
+  const bemerkung = document.getElementById('bemerkung').value;
+
+  datum = convertDatumFormatToISO(datum);
+
+  if (!datum || !sportart || !distanz || isNaN(minuten) || !pulsVon || !pulsBis || !pulsDurchschnitt || !aktivitaetsKalorien || !gesamtKalorien) {
+    alert('Bitte alle Pflichtfelder ausfüllen');
+    return;
+  }
+
+  const newEntry = { datum, sportart, distanz, minuten, sekunden, pulsVon, pulsBis, pulsDurchschnitt, aktivitaetsKalorien, gesamtKalorien, bemerkung };
+  entries.push(newEntry);
+  saveData();
+
+  document.getElementById('datum').value = '';
+  document.getElementById('sportart').value = '';
+  document.getElementById('distanz').value = '';
+  document.getElementById('zeit-minuten').value = '';
+  document.getElementById('zeit-sekunden').value = '';
+  document.getElementById('puls-von').value = '';
+  document.getElementById('puls-bis').value = '';
+  document.getElementById('aktivitaets-kalorien').value = '';
+  document.getElementById('gesamt-kalorien').value = '';
+  document.getElementById('bemerkung').value = '';
+
+  currentPage = 1;
+  renderAnalysis();
+  renderTable();
+  renderSports();
+  renderRecords();
+  renderTimeBasedRecords();
+  
+  // Zeige Trainingsplan-Empfehlung für morgen NUR wenn "Hauptteil" eingegeben wurde
+  const recommendation = generateTrainingRecommendation(newEntry);
+  if (recommendation !== null) {
+    showRecommendationModal(recommendation);
+  }
+}
+
+
+function deleteEntry(idx) {
+  if (confirm('Eintrag löschen?')) {
+    entries.splice(idx, 1);
+    saveData();
+    currentPage = 1;
+    renderAnalysis();
+    renderTable();
+    renderSports();
+    renderRecords();
+    renderTimeBasedRecords();
+  }
+}
+
+function exportData() {
+  const dataStr = JSON.stringify(entries, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'trainings-daten-' + new Date().toISOString().split('T')[0] + '.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (Array.isArray(imported)) {
+        entries = imported;
+        saveData();
+        currentPage = 1;
+        renderAnalysis();
+        renderTable();
+        renderSports();
+        renderRecords();
+        renderTimeBasedRecords();
+        alert('Daten erfolgreich importiert!');
+      } else {
+        alert('Ungültiges Dateiformat');
+      }
+    } catch(err) {
+      alert('Fehler beim Importieren: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function filterTable() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const rows = document.querySelectorAll('#tableBody tr');
+  
+  rows.forEach(row => {
+    if (row.cells.length < 3) return;
+    const sportart = row.cells[1].textContent.toLowerCase();
+    const beschreibung = row.cells[2].textContent.toLowerCase();
+    
+    if (sportart.includes(searchTerm) || beschreibung.includes(searchTerm) || searchTerm === '') {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+function previousPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+}
+
+function nextPage() {
+  const sorted = [...entries].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const totalPages = Math.ceil(sorted.length / 10);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderTable();
+  }
+}
+
+function openEditModal(idx) {
+  currentEditIdx = idx;
+  const entry = entries[idx];
+  
+  document.getElementById('edit-datum').value = entry.datum;
+  document.getElementById('edit-sportart').value = entry.sportart;
+  document.getElementById('edit-bemerkung').value = entry.bemerkung || '';
+  document.getElementById('edit-distanz').value = entry.distanz;
+  document.getElementById('edit-minuten').value = entry.minuten;
+  document.getElementById('edit-sekunden').value = entry.sekunden;
+  document.getElementById('edit-puls-von').value = entry.pulsVon;
+  document.getElementById('edit-puls-bis').value = entry.pulsBis;
+  document.getElementById('edit-puls-durchschnitt').value = entry.pulsDurchschnitt || '';
+  document.getElementById('edit-aktivitaets-kalorien').value = entry.aktivitaetsKalorien;
+  document.getElementById('edit-gesamt-kalorien').value = entry.gesamtKalorien;
+  
+  document.getElementById('editModal').style.display = 'block';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  currentEditIdx = null;
+}
+
+function saveEdit() {
+  if (currentEditIdx === null) return;
+  
+  const datum = document.getElementById('edit-datum').value;
+  const sportart = document.getElementById('edit-sportart').value;
+  const bemerkung = document.getElementById('edit-bemerkung').value;
+  const distanz = parseLocalFloat(document.getElementById('edit-distanz').value);
+  const minuten = parseInt(document.getElementById('edit-minuten').value);
+  const sekunden = parseInt(document.getElementById('edit-sekunden').value) || 0;
+  const pulsVon = parseInt(document.getElementById('edit-puls-von').value);
+  const pulsBis = parseInt(document.getElementById('edit-puls-bis').value);
+  const pulsDurchschnitt = parseInt(document.getElementById('edit-puls-durchschnitt').value);
+  const aktivitaetsKalorien = parseInt(document.getElementById('edit-aktivitaets-kalorien').value);
+  const gesamtKalorien = parseInt(document.getElementById('edit-gesamt-kalorien').value);
+  
+  if (!datum || !sportart || !distanz || isNaN(minuten) || !pulsVon || !pulsBis || !pulsDurchschnitt || !aktivitaetsKalorien || !gesamtKalorien) {
+    alert('Bitte alle Pflichtfelder ausfüllen');
+    return;
+  }
+  
+  entries[currentEditIdx] = { datum, sportart, bemerkung, distanz, minuten, sekunden, pulsVon, pulsBis, pulsDurchschnitt, aktivitaetsKalorien, gesamtKalorien };
+  saveData();
+  closeEditModal();
+  currentPage = 1;
+  renderAnalysis();
+  renderTable();
+  renderSports();
+  renderRecords();
+  renderTimeBasedRecords();
+}
+
+window.onclick = function(event) {
+  const editModal = document.getElementById('editModal');
+  const recommendationModal = document.getElementById('recommendationModal');
+  
+  if (event.target === editModal) closeEditModal();
+  if (event.target === recommendationModal) closeRecommendationModal();
+}
+
+// Weight Tracking
+let weightEntries = [];
+let bodyFatEntries = [];
+
+function loadWeightData() {
+  try {
+    weightEntries = JSON.parse(localStorage.getItem('weightEntries')) || [];
+  } catch(e) {
+    weightEntries = [];
+  }
+}
+
+function saveWeightData() {
+  try {
+    localStorage.setItem('weightEntries', JSON.stringify(weightEntries));
+    syncToFirebase();
+    console.log('✓ Gewichtsdaten gespeichert');
+  } catch(e) {
+    console.error('Fehler beim Speichern von Gewichtsdaten:', e);
+  }
+}
+
+function loadBodyFatData() {
+  try {
+    bodyFatEntries = JSON.parse(localStorage.getItem('bodyFatEntries')) || [];
+  } catch(e) {
+    bodyFatEntries = [];
+  }
+}
+
+function saveBodyFatData() {
+  try {
+    localStorage.setItem('bodyFatEntries', JSON.stringify(bodyFatEntries));
+    syncToFirebase();
+    console.log('✓ Körperfettdaten gespeichert');
+  } catch(e) {
+    console.error('Fehler beim Speichern von Körperfettdaten:', e);
+  }
+}
+
+// Home Office Days
+let homeOfficeDays = {};
+let holidayDays = {};
+
+function loadHOData() {
+  try {
+    const week = getWeekKey();
+    homeOfficeDays = JSON.parse(localStorage.getItem('hodays_' + week)) || {};
+  } catch(e) {
+    homeOfficeDays = {};
+  }
+}
+
+function loadHolidayData() {
+  try {
+    const week = getWeekKey();
+    holidayDays = JSON.parse(localStorage.getItem('holidays_' + week)) || {};
+  } catch(e) {
+    holidayDays = {};
+  }
+}
+
+function saveHOData() {
+  try {
+    const week = getWeekKey();
+    localStorage.setItem('hodays_' + week, JSON.stringify(homeOfficeDays));
+    console.log('✓ HO-Daten gespeichert für Woche:', week);
+  } catch(e) {
+    console.error('Fehler beim Speichern von HO-Daten:', e);
+  }
+}
+
+function saveHolidayData() {
+  try {
+    const week = getWeekKey();
+    localStorage.setItem('holidays_' + week, JSON.stringify(holidayDays));
+    console.log('✓ Feiertag-Daten gespeichert für Woche:', week);
+  } catch(e) {
+    console.error('Fehler beim Speichern von Feiertag-Daten:', e);
+  }
+}
+
+function calculateGesamtkalorien() {
+  const aktivitaetsKal = parseInt(document.getElementById('aktivitaets-kalorien').value) || 0;
+  if (aktivitaetsKal > 0) {
+    const gesamtKal = Math.round(aktivitaetsKal * 1.16);
+    document.getElementById('gesamt-kalorien').value = gesamtKal;
+  }
+}
+
+function getWeekKey() {
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+  return weekStart.getFullYear() + '-W' + String(weekStart.getWeek()).padStart(2, '0');
+}
+
+// Polyfill für getWeek()
+Date.prototype.getWeek = function() {
+  const d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+};
+
+function updateTrainingPlan() {
+  homeOfficeDays = {
+    'Montag': document.getElementById('ho-montag').checked,
+    'Dienstag': document.getElementById('ho-dienstag').checked,
+    'Mittwoch': document.getElementById('ho-mittwoch').checked,
+    'Donnerstag': document.getElementById('ho-donnerstag').checked,
+    'Freitag': document.getElementById('ho-freitag').checked
+  };
+  
+  holidayDays = {
+    'Montag': document.getElementById('holiday-montag').checked,
+    'Dienstag': document.getElementById('holiday-dienstag').checked,
+    'Mittwoch': document.getElementById('holiday-mittwoch').checked,
+    'Donnerstag': document.getElementById('holiday-donnerstag').checked,
+    'Freitag': document.getElementById('holiday-freitag').checked
+  };
+  
+  saveHOData();
+  saveHolidayData();
+  
+  const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+  const hoDays = days.filter(day => homeOfficeDays[day]);
+  const nonHODays = days.filter(day => !homeOfficeDays[day]);
+  const holidayDaysList = days.filter(day => holidayDays[day]);
+  
+  // SPEZIAL-FALL: Mittwoch + Freitag HO (optimal für Intervalle) — ABER NICHT wenn Feiertag
+  if (hoDays.length === 2 && homeOfficeDays['Mittwoch'] && homeOfficeDays['Freitag'] && !holidayDays['Mittwoch'] && !holidayDays['Freitag']) {
+    // Montag: Rower intensiv (Oberkörper)
+    trainingPlan['Montag'] = {
+      training: 'Rower intensiv',
+      dauer: '30–35 Min',
+      intensitaet: 'Hoch',
+      details: { aufwaermen: '5 Min lockeres Rudern', aufwaermen_puls: '120–130 BPM', hauptteil: '20-25 Min Rower High-Intensity', hauptteil_puls: '150–175 BPM', cooldown: '5 Min Easy Recovery', cooldown_puls: '110–120 BPM', pulsbereich: '150–175 BPM', kalorien: '400–550 kcal' }
+    };
+    
+    // Dienstag: Assault Bike HIIT (Beine - nach Rower Oberkörper)
+    trainingPlan['Dienstag'] = {
+      training: 'Assault Bike HIIT',
+      dauer: '35–40 Min',
+      intensitaet: 'Hoch',
+      details: { aufwaermen: '5 Min lockeres Fahren', aufwaermen_puls: '120–130 BPM', hauptteil: '6-8 × (1 Min Vollgas-Sprint + 1:30 Min Easy Recovery)', hauptteil_puls: '160–185 BPM (Sprints), 130–140 BPM (Recovery)', cooldown: '5 Min Cool-down', cooldown_puls: '110–120 BPM', pulsbereich: '160–185 BPM (Sprints), 130–140 BPM (Recovery)', kalorien: '450–600 kcal' }
+    };
+    
+    // Mittwoch (HO): Joggen-Intervalle oder Treppensteigen/Laufband
+    trainingPlan['Mittwoch'] = {
+      training: 'Joggen-Intervalle (Home Office) – bei >26°C: Treppensteigen/Laufband',
+      dauer: '55–65 Min / 30 Min Treppe/Laufband',
+      intensitaet: 'Mittel–Hoch',
+      details: { aufwaermen: '5 Min lockeres Traben / 3 Min locker Treppe/Laufband', aufwaermen_puls: '120–130 BPM', hauptteil: '5–6 × (3 Min zügig 145–175 BPM + 2 Min locker) – ODER bei Hitze (>26°C): 30 Min Treppensteigen oder Laufband-Intervalle (rauf zügig/Tempo hoch, runter/locker)', hauptteil_puls: '145–175 BPM (zügig), 130–140 BPM (locker)', cooldown: '5 Min lockeres Auslaufen / Stretching', cooldown_puls: '110–125 BPM', pulsbereich: '145–175 BPM', kalorien: '280–600 kcal', datenquellen: '📍 Datenquellen:\n• Joggen: Apple Watch\n• Treppensteigen/Laufband: Apple Watch' }
+    };
+    
+    // Donnerstag: Rower Recovery (nach intensivem Mittwoch)
+    trainingPlan['Donnerstag'] = {
+      training: 'Rower Recovery',
+      dauer: '23–28 Min',
+      intensitaet: 'Niedrig',
+      details: { aufwaermen: '5 Min lockeres Rudern', aufwaermen_puls: '120–130 BPM', hauptteil: '15–18 Min Steady Easy Rower – konstantes lockeres Tempo', hauptteil_puls: '130–145 BPM', cooldown: '3–5 Min Easy Auslaufen', cooldown_puls: '110–120 BPM', pulsbereich: '130–145 BPM', kalorien: '300–350 kcal' }
+    };
+    
+    // Freitag (HO): Joggen oder Treppensteigen/Laufband
+    trainingPlan['Freitag'] = {
+      training: 'Joggen (Home Office) – bei >26°C: Treppensteigen/Laufband',
+      dauer: '7–9 km / 25–30 Min Treppe/Laufband',
+      intensitaet: 'Moderat',
+      details: { aufwaermen: 'lockeres Einlaufen / 3 Min locker Treppe/Laufband', aufwaermen_puls: '115–125 BPM', hauptteil: '7–9 km moderates Jogging – ODER bei Hitze (>26°C): 25–30 Min Treppensteigen oder Laufband (rauf zügig/Tempo moderat, runter/locker)', hauptteil_puls: '140–155 BPM', cooldown: 'Stretching', cooldown_puls: 'n/a', pulsbereich: '140–155 BPM', kalorien: '280–500 kcal', datenquellen: '📍 Datenquellen:\n• Joggen: Apple Watch\n• Treppensteigen/Laufband: Apple Watch' }
+    };
+    
+  } else {
+    // GENERISCHE LOGIK für andere HO-Kombinationen
+    // Kraft-Trainings für Nicht-HO-Tage (abwechselnd Rower/Assault Bike)
+    const rowerBikeTrainings = [
+      { training: 'Rower intensiv', dauer: '30–35 Min', intensitaet: 'Hoch', details: { aufwaermen: '5 Min lockeres Rudern', aufwaermen_puls: '120–130 BPM', hauptteil: '20-25 Min Rower High-Intensity', hauptteil_puls: '150–175 BPM', cooldown: '5 Min Easy Recovery', cooldown_puls: '110–120 BPM', pulsbereich: '150–175 BPM', kalorien: '400–550 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Concept2 Rower Display\n• Zeit: Concept2 Rower Display\n• Puls: Apple Watch\n• Gesamtkalorien: Concept2 Rower Display\n• (Aktivitätskalorien: berechnen oder 0)' } },
+      { training: 'Assault Bike HIIT', dauer: '35–40 Min', intensitaet: 'Hoch', details: { aufwaermen: '5 Min lockeres Fahren', aufwaermen_puls: '120–130 BPM', hauptteil: '6-8 × (1 Min Vollgas-Sprint + 1:30 Min Easy Recovery)', hauptteil_puls: '160–185 BPM (Sprints), 130–140 BPM (Recovery)', cooldown: '5 Min Cool-down', cooldown_puls: '110–120 BPM', pulsbereich: '160–185 BPM (Sprints), 130–140 BPM (Recovery)', kalorien: '450–600 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Assault Bike Display\n• Zeit: Assault Bike Display\n• Puls: Apple Watch\n• Gesamtkalorien: Assault Bike Display\n• (Aktivitätskalorien: berechnen oder 0)' } }
+    ];
+    
+    // Joggen-Trainings für HO-Tage
+    const joggingTrainings = {
+      'Montag': { training: 'Joggen (Home Office)', dauer: '5–7 km', intensitaet: 'Niedrig–Moderat', details: { aufwaermen: 'lockeres Einlaufen', aufwaermen_puls: '110–120 BPM', hauptteil: '5–7 km lockeres Jogging — KADENZ-FOKUS: 165–175 Schritte/Min', hauptteil_puls: '130–150 BPM', hauptteil_kadenz: '165–175', cooldown: 'Stretching', cooldown_puls: 'n/a', pulsbereich: '130–150 BPM', kalorien: '250–350 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Apple Watch\n• Zeit: Apple Watch\n• Puls: Apple Watch\n• Gesamtkalorien: Apple Watch' } },
+      'Dienstag': { training: 'Joggen-Intervalle (Home Office)', dauer: '60 Min', intensitaet: 'Mittel–Hoch', details: { aufwaermen: '15 Min lockeres Einlaufen', aufwaermen_puls: '120–130 BPM', hauptteil: '6 Runden à (3 Min zügig + 2 Min locker) — KADENZTRAINING: 170–175 Schritte/Min durchgehend!', hauptteil_puls: '150–165 BPM (zügig), 130–140 BPM (locker)', hauptteil_kadenz: '170–175', cooldown: '15 Min lockeres Auslaufen + Stretching', cooldown_puls: '110–125 BPM', pulsbereich: '130–165 BPM', kalorien: '500–650 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Apple Watch\n• Zeit: Apple Watch\n• Puls: Apple Watch\n• Gesamtkalorien: Apple Watch' } },
+      'Mittwoch': { training: 'Joggen-Intervalle (Home Office)', dauer: '55–65 Min', intensitaet: 'Mittel–Hoch', details: { aufwaermen: '5 Min lockeres Traben', aufwaermen_puls: '120–130 BPM', hauptteil: '5-6 × (3 Min zügig bis 175 BPM + 2 Min locker) — KADENZ-FOKUS: 170–175 Schritte/Min durchgehend', hauptteil_puls: '145–175 BPM (zügig), 130–140 BPM (locker)', hauptteil_kadenz: '170–175', cooldown: '5 Min lockeres Auslaufen', cooldown_puls: '110–125 BPM', pulsbereich: '130–175 BPM', kalorien: '450–600 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Apple Watch\n• Zeit: Apple Watch\n• Puls: Apple Watch\n• Gesamtkalorien: Apple Watch' } },
+      'Freitag': { training: 'Joggen (Home Office)', dauer: '7–9 km', intensitaet: 'Moderat', details: { aufwaermen: 'lockeres Einlaufen', aufwaermen_puls: '115–125 BPM', hauptteil: '7–9 km moderates Jogging — KADENZ-FOKUS: 170–180 Schritte/Min (Recovery mit hoher Kadenz)', hauptteil_puls: '140–155 BPM', hauptteil_kadenz: '170–180', cooldown: 'Stretching', cooldown_puls: 'n/a', pulsbereich: '140–155 BPM', kalorien: '350–500 kcal', datenquellen: '📍 Datenquellen:\n• Distanz: Apple Watch\n• Zeit: Apple Watch\n• Puls: Apple Watch\n• Gesamtkalorien: Apple Watch' } }
+    };
+    
+    // Apply HO-Tage mit Joggen
+    hoDays.forEach(day => {
+      trainingPlan[day] = joggingTrainings[day];
+    });
+    
+    // Apply Nicht-HO-Tage mit Rower/Bike Abwechslung
+    nonHODays.forEach((day, idx) => {
+      trainingPlan[day] = rowerBikeTrainings[idx % rowerBikeTrainings.length];
+    });
+  }
+  
+  // Samstag/Sonntag: RUHETAGE
+  trainingPlan['Samstag/Sonntag'] = {
+    training: 'Ruhetage',
+    dauer: '–',
+    intensitaet: 'Ruhe',
+    details: { aufwaermen: 'keine', hauptteil: 'Wochenende für vollständige Erholung. Kein strukturiertes Training. Du kannst gemütlich spazieren gehen, entspannen oder leichte Mobilität/Yoga machen', cooldown: 'n/a', pulsbereich: '–', kalorien: 'n/a' }
+  };
+  
+  // FEIERTAG-LOGIK: Alle Feiertage bekommen Joggen Recovery (NACH aller anderen Logik!)
+  holidayDaysList.forEach(day => {
+    // Krankheitstag hat Vorrang – Feiertag wird ignoriert wenn Krank
+    if (sickDays[day]) return;
+    trainingPlan[day] = {
+      training: 'Joggen Recovery (optional)',
+      dauer: '5–7 km',
+      intensitaet: 'Niedrig–Moderat',
+      details: { aufwaermen: 'lockeres Einlaufen', aufwaermen_puls: '110–120 BPM', hauptteil: '5–7 km lockeres Jogging — nur falls du magst!', hauptteil_puls: '130–150 BPM', hauptteil_kadenz: '165–175', cooldown: 'Stretching', cooldown_puls: 'n/a', pulsbereich: '130–150 BPM', kalorien: '250–350 kcal' }
+    };
+  });
+
+  // KRANKHEITSTAG-LOGIK: Hat immer Vorrang – ZULETZT angewendet (überschreibt alles)
+  const sickDaysList = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+  sickDaysList.forEach(day => {
+    if (sickDays[day]) {
+      trainingPlan[day] = {
+        training: '🤒 Krankheitstag – Pause',
+        dauer: '–',
+        intensitaet: 'Ruhe',
+        details: { aufwaermen: 'keine', hauptteil: 'Krankheitstag – kein Training. Erhol dich!', cooldown: 'n/a', pulsbereich: '–', kalorien: '–' }
+      };
+    }
+  });
+  
+  renderTrainingPlan();
+  renderTrainingDetails();
+}
+
+function resetHODays() {
+  document.getElementById('ho-montag').checked = false;
+  document.getElementById('ho-dienstag').checked = false;
+  document.getElementById('ho-mittwoch').checked = false;
+  document.getElementById('ho-donnerstag').checked = false;
+  document.getElementById('ho-freitag').checked = false;
+  
+  homeOfficeDays = {
+    'Montag': false,
+    'Dienstag': false,
+    'Mittwoch': false,
+    'Donnerstag': false,
+    'Freitag': false
+  };
+  
+  saveHOData();
+  updateTrainingPlan();
+}
+
+function resetHolidayDays() {
+  document.getElementById('holiday-montag').checked = false;
+  document.getElementById('holiday-dienstag').checked = false;
+  document.getElementById('holiday-mittwoch').checked = false;
+  document.getElementById('holiday-donnerstag').checked = false;
+  document.getElementById('holiday-freitag').checked = false;
+  
+  holidayDays = {
+    'Montag': false,
+    'Dienstag': false,
+    'Mittwoch': false,
+    'Donnerstag': false,
+    'Freitag': false
+  };
+  
+  saveHolidayData();
+  updateTrainingPlan();
+}
+
+function checkAndResetMondayHO() {
+  const today = new Date();
+  if (today.getDay() === 1) { // Montag
+    // Neue Woche = HO-Tage zurücksetzen auf Standard (Mi + Fr)
+    const lastWeekKey = (() => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 7);
+      return d.getFullYear() + '-W' + String(d.getWeek()).padStart(2, '0');
+    })();
+    
+    const currentWeekKey = getWeekKey();
+    
+    if (lastWeekKey !== currentWeekKey) {
+      // Reset auf Standard Mi + Fr
+      homeOfficeDays = {
+        'Montag': false,
+        'Dienstag': false,
+        'Mittwoch': true,
+        'Donnerstag': false,
+        'Freitag': true
+      };
+      saveHOData();
+      document.getElementById('ho-montag').checked = false;
+      document.getElementById('ho-dienstag').checked = false;
+      document.getElementById('ho-mittwoch').checked = true;
+      document.getElementById('ho-donnerstag').checked = false;
+      document.getElementById('ho-freitag').checked = true;
+    }
+  }
+}
+
+function resetPlanStatus() {
+  if (confirm('Alle Markierungen des Trainingsplans zurücksetzen? (✓ Absolviert, ✕ Nicht gemacht)')) {
+    try {
+      localStorage.removeItem('planStatus');
+    } catch(e) {}
+    renderTrainingPlan();
+    renderTrainingDetails();
+    alert('✅ Plan-Status zurückgesetzt!');
+  }
+}
+
+
+
+function addWeightEntry() {
+  let datum = document.getElementById('weight-datum').value;
+  const kg = parseFloat(document.getElementById('weight-kg').value);
+  
+  if (!datum || isNaN(kg)) {
+    alert('Bitte Datum und Gewicht ausfüllen');
+    return;
+  }
+  
+  // Vorhandenen Eintrag für dieses Datum überschreiben
+  const existingIdx = weightEntries.findIndex(e => e.datum === datum);
+  if (existingIdx > -1) {
+    weightEntries[existingIdx].kg = kg;
+  } else {
+    weightEntries.push({ datum, kg });
+  }
+  weightEntries.sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  saveWeightData();
+  
+  document.getElementById('weight-datum').value = '';
+  document.getElementById('weight-kg').value = '';
+  
+  renderWeightComparison();
+  renderWeightHistory();
+}
+
+function deleteWeightEntry(idx) {
+  if (confirm('Eintrag löschen?')) {
+    weightEntries.splice(idx, 1);
+    saveWeightData();
+    renderWeightComparison();
+    renderWeightHistory();
+  }
+}
+
+function editWeightEntry(idx) {
+  const entry = weightEntries[idx];
+  document.getElementById('weight-datum').value = entry.datum;
+  document.getElementById('weight-kg').value = entry.kg;
+  // Eintrag entfernen damit er beim Speichern neu angelegt/überschrieben wird
+  weightEntries.splice(idx, 1);
+  saveWeightData();
+  renderWeightComparison();
+  renderWeightHistory();
+}
+
+function renderWeightComparison() {
+  const container = document.getElementById('weightComparison');
+  if (weightEntries.length === 0) { container.innerHTML = ''; return; }
+  
+  const currentKg = weightEntries[0].kg;
+  let html = '<div class="weight-comparison-row"><div class="weight-comparison-label">Aktuell:</div><div class="weight-comparison-value">' + currentKg + ' kg</div></div>';
+  
+  if (weightEntries.length > 1) {
+    const diff = currentKg - weightEntries[1].kg;
+    const diffClass = diff < 0 ? 'weight-loss' : diff > 0 ? 'weight-gain' : '';
+    const diffText = diff < 0 ? '↓ ' + Math.abs(diff).toFixed(1) + ' kg' : diff > 0 ? '↑ ' + diff.toFixed(1) + ' kg' : '→ Gleich';
+    html += '<div class="weight-comparison-row"><div class="weight-comparison-label">Differenz:</div><div class="weight-comparison-value ' + diffClass + '">' + diffText + '</div></div>';
+    
+    const startKg = weightEntries[weightEntries.length - 1].kg;
+    const startDiff = currentKg - startKg;
+    const startDiffClass = startDiff < 0 ? 'weight-loss' : startDiff > 0 ? 'weight-gain' : '';
+    const startDiffText = startDiff < 0 ? '↓ ' + Math.abs(startDiff).toFixed(1) + ' kg' : startDiff > 0 ? '↑ ' + startDiff.toFixed(1) + ' kg' : '→ Gleich';
+    html += '<div class="weight-comparison-row" style="border-top: 1px solid #f3f4f6; padding-top: 0.5rem; margin-top: 0.5rem;"><div class="weight-comparison-label">Seit Start:</div><div class="weight-comparison-value ' + startDiffClass + '">' + startDiffText + '</div></div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderWeightHistory() {
+  const container = document.getElementById('weightHistory');
+  if (!container || weightEntries.length === 0) { if(container) container.innerHTML = ''; return; }
+
+  // Mini-Chart (SVG)
+  const sorted = [...weightEntries].reverse(); // älteste zuerst
+  const vals = sorted.map(e => e.kg);
+  const minVal = Math.min(...vals) - 0.5;
+  const maxVal = Math.max(...vals) + 0.5;
+  const w = 220, h = 60, pad = 8;
+  const xStep = vals.length > 1 ? (w - pad*2) / (vals.length - 1) : 0;
+  const yScale = v => h - pad - ((v - minVal) / (maxVal - minVal)) * (h - pad*2);
+
+  let points = vals.map((v, i) => (pad + i * xStep) + ',' + yScale(v)).join(' ');
+  let dots = vals.map((v, i) => 
+    '<circle cx="' + (pad + i * xStep) + '" cy="' + yScale(v) + '" r="3" fill="#3b82f6"/>'
+  ).join('');
+
+  const chartSvg = '<svg width="' + w + '" height="' + h + '" style="display:block;margin:0.5rem 0;">' +
+    '<polyline points="' + points + '" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>' +
+    dots +
+    '<text x="' + pad + '" y="' + (h-1) + '" font-size="9" fill="#9ca3af">' + sorted[0].datum.slice(5) + '</text>' +
+    (sorted.length > 1 ? '<text x="' + (w-pad) + '" y="' + (h-1) + '" font-size="9" fill="#9ca3af" text-anchor="end">' + sorted[sorted.length-1].datum.slice(5) + '</text>' : '') +
+    '</svg>';
+
+  // Letzte 5 Einträge als Liste mit Edit/Delete
+  const last5 = weightEntries.slice(0, 5);
+  let listHtml = '<div style="border-top: 1px solid #f3f4f6; padding-top: 0.5rem; margin-top: 0.5rem;">';
+  listHtml += '<div style="font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Verlauf</div>';
+  listHtml += chartSvg;
+  last5.forEach((e, i) => {
+    const prev = weightEntries[i + 1];
+    const diff = prev ? (e.kg - prev.kg) : null;
+    const diffStr = diff !== null ? (diff < 0 ? ' <span style="color:#10b981">↓' + Math.abs(diff).toFixed(1) + '</span>' : diff > 0 ? ' <span style="color:#ef4444">↑' + diff.toFixed(1) + '</span>' : '') : '';
+    listHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;border-bottom:1px solid #f9fafb;font-size:11px;">' +
+      '<span style="color:#6b7280;">' + e.datum.split('-').reverse().join('.') + '</span>' +
+      '<span style="font-weight:700;color:#1f2937;">' + e.kg + ' kg' + diffStr + '</span>' +
+      '<span style="display:flex;gap:4px;">' +
+        '<button onclick="editWeightEntry(' + i + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;color:#3b82f6;" title="Bearbeiten">✏️</button>' +
+        '<button onclick="deleteWeightEntry(' + i + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;color:#ef4444;" title="Löschen">🗑️</button>' +
+      '</span>' +
+      '</div>';
+  });
+  if (weightEntries.length > 5) listHtml += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:0.25rem;">+ ' + (weightEntries.length - 5) + ' weitere Einträge</div>';
+  listHtml += '</div>';
+
+  container.innerHTML = listHtml;
+}
+
+// ===== KÖRPERFETT =====
+function addBodyFatEntry() {
+  let datum = document.getElementById('bodyfat-datum').value;
+  const percent = parseFloat(document.getElementById('bodyfat-percent').value);
+  
+  if (!datum || isNaN(percent)) {
+    alert('Bitte Datum und Körperfett-% ausfüllen');
+    return;
+  }
+  
+  const existingIdx = bodyFatEntries.findIndex(e => e.datum === datum);
+  if (existingIdx > -1) {
+    bodyFatEntries[existingIdx].percent = percent;
+  } else {
+    bodyFatEntries.push({ datum, percent });
+  }
+  bodyFatEntries.sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  saveBodyFatData();
+  
+  document.getElementById('bodyfat-datum').value = '';
+  document.getElementById('bodyfat-percent').value = '';
+  
+  renderBodyFatComparison();
+  renderBodyFatHistory();
+}
+
+function deleteBodyFatEntry(idx) {
+  if (confirm('Eintrag löschen?')) {
+    bodyFatEntries.splice(idx, 1);
+    saveBodyFatData();
+    renderBodyFatComparison();
+    renderBodyFatHistory();
+  }
+}
+
+function editBodyFatEntry(idx) {
+  const entry = bodyFatEntries[idx];
+  document.getElementById('bodyfat-datum').value = entry.datum;
+  document.getElementById('bodyfat-percent').value = entry.percent;
+  bodyFatEntries.splice(idx, 1);
+  saveBodyFatData();
+  renderBodyFatComparison();
+  renderBodyFatHistory();
+}
+
+function renderBodyFatComparison() {
+  const container = document.getElementById('bodyFatComparison');
+  if (!container) return;
+  if (bodyFatEntries.length === 0) { container.innerHTML = ''; return; }
+  
+  const currentPercent = bodyFatEntries[0].percent;
+  let html = '<div class="weight-comparison-row"><div class="weight-comparison-label">Aktuell:</div><div class="weight-comparison-value">' + currentPercent + ' %</div></div>';
+  
+  if (bodyFatEntries.length > 1) {
+    const diff = currentPercent - bodyFatEntries[1].percent;
+    const diffClass = diff < 0 ? 'weight-loss' : diff > 0 ? 'weight-gain' : '';
+    const diffText = diff < 0 ? '↓ ' + Math.abs(diff).toFixed(1) + ' %' : diff > 0 ? '↑ ' + diff.toFixed(1) + ' %' : '→ Gleich';
+    html += '<div class="weight-comparison-row"><div class="weight-comparison-label">Differenz:</div><div class="weight-comparison-value ' + diffClass + '">' + diffText + '</div></div>';
+    
+    const startPercent = bodyFatEntries[bodyFatEntries.length - 1].percent;
+    const startDiff = currentPercent - startPercent;
+    const startDiffClass = startDiff < 0 ? 'weight-loss' : startDiff > 0 ? 'weight-gain' : '';
+    const startDiffText = startDiff < 0 ? '↓ ' + Math.abs(startDiff).toFixed(1) + ' %' : startDiff > 0 ? '↑ ' + startDiff.toFixed(1) + ' %' : '→ Gleich';
+    html += '<div class="weight-comparison-row" style="border-top: 1px solid #f3f4f6; padding-top: 0.5rem; margin-top: 0.5rem;"><div class="weight-comparison-label">Seit Start:</div><div class="weight-comparison-value ' + startDiffClass + '">' + startDiffText + '</div></div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderBodyFatHistory() {
+  const container = document.getElementById('bodyFatHistory');
+  if (!container) return;
+  if (bodyFatEntries.length === 0) { container.innerHTML = ''; return; }
+
+  const sorted = [...bodyFatEntries].reverse();
+  const vals = sorted.map(e => e.percent);
+  const minVal = Math.min(...vals) - 0.5;
+  const maxVal = Math.max(...vals) + 0.5;
+  const w = 220, h = 60, pad = 8;
+  const xStep = vals.length > 1 ? (w - pad*2) / (vals.length - 1) : 0;
+  const yScale = v => h - pad - ((v - minVal) / (maxVal - minVal)) * (h - pad*2);
+
+  let points = vals.map((v, i) => (pad + i * xStep) + ',' + yScale(v)).join(' ');
+  let dots = vals.map((v, i) => 
+    '<circle cx="' + (pad + i * xStep) + '" cy="' + yScale(v) + '" r="3" fill="#f59e0b"/>'
+  ).join('');
+
+  const chartSvg = '<svg width="' + w + '" height="' + h + '" style="display:block;margin:0.5rem 0;">' +
+    '<polyline points="' + points + '" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/>' +
+    dots +
+    '<text x="' + pad + '" y="' + (h-1) + '" font-size="9" fill="#9ca3af">' + sorted[0].datum.slice(5) + '</text>' +
+    (sorted.length > 1 ? '<text x="' + (w-pad) + '" y="' + (h-1) + '" font-size="9" fill="#9ca3af" text-anchor="end">' + sorted[sorted.length-1].datum.slice(5) + '</text>' : '') +
+    '</svg>';
+
+  const last5 = bodyFatEntries.slice(0, 5);
+  let listHtml = '<div style="border-top: 1px solid #f3f4f6; padding-top: 0.5rem; margin-top: 0.5rem;">';
+  listHtml += '<div style="font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Verlauf</div>';
+  listHtml += chartSvg;
+  last5.forEach((e, i) => {
+    const prev = bodyFatEntries[i + 1];
+    const diff = prev ? (e.percent - prev.percent) : null;
+    const diffStr = diff !== null ? (diff < 0 ? ' <span style="color:#10b981">↓' + Math.abs(diff).toFixed(1) + '</span>' : diff > 0 ? ' <span style="color:#ef4444">↑' + diff.toFixed(1) + '</span>' : '') : '';
+    listHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;border-bottom:1px solid #f9fafb;font-size:11px;">' +
+      '<span style="color:#6b7280;">' + e.datum.split('-').reverse().join('.') + '</span>' +
+      '<span style="font-weight:700;color:#1f2937;">' + e.percent + ' %' + diffStr + '</span>' +
+      '<span style="display:flex;gap:4px;">' +
+        '<button onclick="editBodyFatEntry(' + i + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;color:#3b82f6;" title="Bearbeiten">✏️</button>' +
+        '<button onclick="deleteBodyFatEntry(' + i + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;color:#ef4444;" title="Löschen">🗑️</button>' +
+      '</span>' +
+      '</div>';
+  });
+  if (bodyFatEntries.length > 5) listHtml += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:0.25rem;">+ ' + (bodyFatEntries.length - 5) + ' weitere Einträge</div>';
+  listHtml += '</div>';
+
+  container.innerHTML = listHtml;
+}
+
+// Set today's date as default in weight input
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date();
+  const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  document.getElementById('weight-datum').value = dateStr;
+});
+
+// ===== KRANKHEITSTAGE =====
+let sickDays = {};
+
+function loadSickData() {
+  try {
+    const week = getWeekKey();
+    sickDays = JSON.parse(localStorage.getItem('sickdays_' + week)) || {};
+  } catch(e) { sickDays = {}; }
+}
+
+function saveSickData() {
+  try {
+    const week = getWeekKey();
+    localStorage.setItem('sickdays_' + week, JSON.stringify(sickDays));
+  } catch(e) {}
+}
+
+function updateSickDays() {
+  sickDays = {
+    'Montag': document.getElementById('sick-montag').checked,
+    'Dienstag': document.getElementById('sick-dienstag').checked,
+    'Mittwoch': document.getElementById('sick-mittwoch').checked,
+    'Donnerstag': document.getElementById('sick-donnerstag').checked,
+    'Freitag': document.getElementById('sick-freitag').checked
+  };
+  saveSickData();
+  
+  // Automatisch Krankheitstag-Status setzen
+  const sickUpdateDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+  let planStatus = {};
+  try { planStatus = JSON.parse(localStorage.getItem('planStatus')) || {}; } catch(e) {}
+  
+  sickUpdateDays.forEach(day => {
+    if (sickDays[day]) {
+      planStatus[day] = 'sick';
+    } else if (planStatus[day] === 'sick') {
+      delete planStatus[day];
+    }
+  });
+  try { localStorage.setItem('planStatus', JSON.stringify(planStatus)); } catch(e) {}
+  renderTrainingPlan();
+  renderTrainingDetails();
+}
+
+function resetSickDays() {
+  ['montag','dienstag','mittwoch','donnerstag','freitag'].forEach(d => {
+    document.getElementById('sick-' + d).checked = false;
+  });
+  sickDays = { 'Montag': false, 'Dienstag': false, 'Mittwoch': false, 'Donnerstag': false, 'Freitag': false };
+  saveSickData();
+  
+  // Sick-Status aus planStatus entfernen
+  let planStatus = {};
+  try { planStatus = JSON.parse(localStorage.getItem('planStatus')) || {}; } catch(e) {}
+  Object.keys(planStatus).forEach(day => { if (planStatus[day] === 'sick') delete planStatus[day]; });
+  try { localStorage.setItem('planStatus', JSON.stringify(planStatus)); } catch(e) {}
+  renderTrainingPlan();
+  renderTrainingDetails();
+}
+
+// ===== AUTOMATISCHE HITZE-UMSCHALTUNG =====
+async function checkHeatAndUpdatePlan() {
+  // Nur an HO-Tagen relevant (Joggen ist nur HO)
+  const todayName = getTodayDayName();
+  if (!homeOfficeDays[todayName]) return;
+  
+  try {
+    // Stündliche Temperatur für Bielefeld abrufen
+    const baseUrl = 'https://api.open-meteo.com/v1/forecast?latitude=52.0302&longitude=8.5325&hourly=temperature_2m&forecast_days=1&timezone=Europe%2FBerlin';
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(baseUrl);
+    let response;
+    try { response = await fetch(baseUrl); }
+    catch(e) { response = await fetch(proxyUrl); }
+    const data = await response.json();
+    
+    // Temperatur zwischen 11:00 und 13:00 Uhr (Index 11 und 12)
+    const temps = data.hourly.temperature_2m;
+    const trainingsTemps = [temps[11], temps[12]]; // 11:00 und 12:00 Uhr
+    const maxTrainingsTemp = Math.max(...trainingsTemps);
+    
+    console.log('🌡️ Trainingstemperatur (11-13 Uhr):', maxTrainingsTemp + '°C');
+    
+    // Trainingsplan für heute anpassen
+    if (maxTrainingsTemp > 26) {
+      // Zu heiß → Treppensteigen oder Laufband
+      const currentPlan = trainingPlan[todayName];
+      if (currentPlan && currentPlan.training.toLowerCase().includes('jogg')) {
+        trainingPlan[todayName] = {
+          ...currentPlan,
+          training: '🌡️ Treppensteigen oder Laufband (Hitze >26°C)',
+          dauer: '25–30 Min',
+          intensitaet: currentPlan.intensitaet,
+          details: {
+            ...currentPlan.details,
+            hauptteil: '25–30 Min Treppensteigen ODER Laufband (rauf zügig/Tempo moderat, runter/locker) – Hitze: ' + Math.round(maxTrainingsTemp) + '°C um Trainingszeit',
+            hauptteil_puls: '125–145 BPM',
+            kalorien: '260–320 kcal',
+            datenquellen: '📍 Datenquellen:\n• Stufen/Distanz + Kalorien: Apple Watch\n• Automatisch umgestellt wegen Hitze'
+          }
+        };
+        renderTrainingPlan();
+        renderTrainingDetails();
+        console.log('✅ Plan auf Treppensteigen/Laufband umgestellt');
+      }
+    }
+  } catch(e) {
+    console.log('Hitze-Check nicht möglich:', e);
+  }
+}
+
+
+async function loadWetter() {
+  const container = document.getElementById('wetterContent');
+  container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 0.5rem;">Wird geladen...</div>';
+  
+  try {
+    // Open-Meteo API - kostenlos, kein API-Key nötig
+    // Bielefeld: 52.0302°N, 8.5325°E
+    const baseUrl = 'https://api.open-meteo.com/v1/forecast?latitude=52.0302&longitude=8.5325&current=temperature_2m,weathercode,windspeed_10m&hourly=temperature_2m&forecast_days=1&timezone=Europe%2FBerlin';
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(baseUrl);
+    let response;
+    try { response = await fetch(baseUrl); }
+    catch(e) { response = await fetch(proxyUrl); }
+    const data = await response.json();
+    
+    const temp = Math.round(data.current.temperature_2m);
+    const windspeed = Math.round(data.current.windspeed_10m);
+    const wcode = data.current.weathercode;
+    
+    // Max-Temperatur heute
+    const hourlyTemps = data.hourly.temperature_2m;
+    const maxTemp = Math.round(Math.max(...hourlyTemps));
+    
+    // Wettercode zu Icon
+    let icon = '☀️';
+    if (wcode >= 71) icon = '❄️';
+    else if (wcode >= 61) icon = '🌧️';
+    else if (wcode >= 51) icon = '🌦️';
+    else if (wcode >= 45) icon = '🌫️';
+    else if (wcode >= 3) icon = '☁️';
+    else if (wcode >= 1) icon = '⛅';
+    
+    // Jogging-Empfehlung
+    const joggingOk = maxTemp <= 26;
+    const joggingColor = joggingOk ? '#065f46' : '#991b1b';
+    const joggingBg = joggingOk ? '#dcfce7' : '#fee2e2';
+    const joggingText = joggingOk 
+      ? '✅ Joggen möglich (≤26°C)' 
+      : '🌡️ Zu heiß zum Joggen! → Treppensteigen oder Laufband';
+    
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <span style="font-size: 32px;">${icon}</span>
+        <div>
+          <div style="font-size: 22px; font-weight: 700; color: #1f2937;">${temp}°C</div>
+          <div style="font-size: 11px; color: #6b7280;">aktuell · Wind: ${windspeed} km/h</div>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px;">
+        <span style="color: #6b7280;">Max. heute:</span>
+        <span style="font-weight: 700; color: #1f2937;">${maxTemp}°C</span>
+      </div>
+      <div style="padding: 0.6rem 0.75rem; background: ${joggingBg}; border-radius: 8px; font-size: 12px; font-weight: 700; color: ${joggingColor}; text-align: center;">
+        ${joggingText}
+      </div>
+    `;
+  } catch(e) {
+    container.innerHTML = '<div style="text-align: center; color: #ef4444; font-size: 12px; padding: 0.5rem;">⚠️ Wetter konnte nicht geladen werden</div>';
+  }
+}
+
+// Wetter beim Start laden + Hitze-Check
+document.addEventListener('DOMContentLoaded', function() {
+  loadWetter();
+  checkHeatAndUpdatePlan();
+});
+
+
+checkLocalStorage();
+
+
+loadData();
+
+
+loadWeightData();
+loadBodyFatData();
+loadHOData();
+loadHolidayData();
+loadSickData();
+
+// Zeige Debug-Info
+updateDebugInfo();
+
+// Setze Default HO-Tage auf Mittwoch + Freitag - immer sicherstellen
+if (!homeOfficeDays || Object.keys(homeOfficeDays).length === 0) {
+  homeOfficeDays = {
+    'Montag': false,
+    'Dienstag': false,
+    'Mittwoch': true,
+    'Donnerstag': false,
+    'Freitag': true
+  };
+  saveHOData();
+}
+
+// Sicherstellen dass Mi + Fr immer als HO markiert sind (Standard-Konfiguration)
+if (homeOfficeDays['Mittwoch'] === undefined) homeOfficeDays['Mittwoch'] = true;
+if (homeOfficeDays['Freitag'] === undefined) homeOfficeDays['Freitag'] = true;
+
+// Updatee die Checkboxen mit den gespeicherten Werten
+document.getElementById('ho-montag').checked = homeOfficeDays['Montag'] || false;
+document.getElementById('ho-dienstag').checked = homeOfficeDays['Dienstag'] || false;
+document.getElementById('ho-mittwoch').checked = homeOfficeDays['Mittwoch'] || false;
+document.getElementById('ho-donnerstag').checked = homeOfficeDays['Donnerstag'] || false;
+document.getElementById('ho-freitag').checked = homeOfficeDays['Freitag'] || false;
+
+// Updatee die Holiday-Checkboxen mit den gespeicherten Werten
+document.getElementById('holiday-montag').checked = holidayDays['Montag'] || false;
+document.getElementById('holiday-dienstag').checked = holidayDays['Dienstag'] || false;
+document.getElementById('holiday-mittwoch').checked = holidayDays['Mittwoch'] || false;
+document.getElementById('holiday-donnerstag').checked = holidayDays['Donnerstag'] || false;
+document.getElementById('holiday-freitag').checked = holidayDays['Freitag'] || false;
+
+// Updatee die Krankheitstag-Checkboxen mit den gespeicherten Werten
+document.getElementById('sick-montag').checked = sickDays['Montag'] || false;
+document.getElementById('sick-dienstag').checked = sickDays['Dienstag'] || false;
+document.getElementById('sick-mittwoch').checked = sickDays['Mittwoch'] || false;
+document.getElementById('sick-donnerstag').checked = sickDays['Donnerstag'] || false;
+document.getElementById('sick-freitag').checked = sickDays['Freitag'] || false;
+
+// Aktualisiere Trainingsplan BEVOR wir rendern
+checkAndResetMondayHO();
+updateTrainingPlan();
+renderTrainingPlan();
+renderTrainingDetails();
+renderAnalysis();
+renderTable();
+renderSports();
+renderRecords();
+renderTimeBasedRecords();
+updateWeekRange();
+renderWeightComparison();
+renderWeightHistory();
+renderBodyFatComparison();
+renderBodyFatHistory();
+
+document.getElementById('datum').addEventListener('input', function(e) {
+  e.target.value = formatDatumInput(e.target);
+});
+
+// Firebase initialisieren
+initFirebase();
+</script>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-btn active" id="nav-plan" onclick="mobileNav('plan')">
+    <span>📅</span>
+    <span>Plan</span>
+  </button>
+  <button class="mobile-nav-btn" id="nav-entry" onclick="mobileNav('entry')">
+    <span>➕</span>
+    <span>Eintrag</span>
+  </button>
+  <button class="mobile-nav-btn" id="nav-entries" onclick="mobileNav('entries')">
+    <span>📋</span>
+    <span>Einträge</span>
+  </button>
+  <button class="mobile-nav-btn" id="nav-stats" onclick="mobileNav('stats')">
+    <span>📊</span>
+    <span>Statistik</span>
+  </button>
+  <button class="mobile-nav-btn" id="nav-weight" onclick="mobileNav('weight')">
+    <span>⚖️</span>
+    <span>Gewicht</span>
+  </button>
+</nav>
+
+<script>
+function mobileNav(section) {
+  if (window.innerWidth > 768) return;
+  
+  // Nav-Buttons updaten
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + section).classList.add('active');
+  
+  const mainWrapper = document.querySelector('.main-wrapper');
+  const sidebar = document.querySelector('.sidebar');
+  const mainContent = document.querySelector('.main-content');
+  
+  // Alle Sections aus main-content
+  const allSections = mainContent.querySelectorAll('.section');
+  
+  if (section === 'plan') {
+    sidebar.style.display = 'block';
+    mainContent.style.display = 'none';
+  } else if (section === 'entry') {
+    sidebar.style.display = 'none';
+    mainContent.style.display = 'block';
+    allSections.forEach(s => s.style.display = 'none');
+    // Ersten Section (Neuer Eintrag) zeigen
+    allSections[0].style.display = 'block';
+    allSections[0].scrollIntoView({behavior: 'smooth'});
+  } else if (section === 'entries') {
+    sidebar.style.display = 'none';
+    mainContent.style.display = 'block';
+    allSections.forEach(s => s.style.display = 'none');
+    // Analyse + Einträge zeigen (Index 1 + 2)
+    if (allSections[1]) allSections[1].style.display = 'block';
+    if (allSections[2]) allSections[2].style.display = 'block';
+  } else if (section === 'stats') {
+    sidebar.style.display = 'none';
+    mainContent.style.display = 'block';
+    allSections.forEach(s => s.style.display = 'none');
+    // Sportarten + Rekorde zeigen
+    if (allSections[3]) allSections[3].style.display = 'block';
+    if (allSections[4]) allSections[4].style.display = 'block';
+    if (allSections[5]) allSections[5].style.display = 'block';
+  } else if (section === 'weight') {
+    sidebar.style.display = 'block';
+    mainContent.style.display = 'none';
+    // Zum Gewichts-Tracking scrollen
+    const weightBox = document.querySelector('.weight-box');
+    if (weightBox) weightBox.scrollIntoView({behavior: 'smooth'});
+  }
+}
+
+// Mobile: initial Plan zeigen
+if (window.innerWidth <= 768) {
+  setTimeout(() => mobileNav('plan'), 100);
+}
+</script>
+</body>
+</html>
