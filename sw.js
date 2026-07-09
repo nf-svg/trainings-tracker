@@ -1,43 +1,45 @@
-const CACHE_NAME = 'trainings-tracker-v1';
-const URLS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+const CACHE_NAME = 'trainings-tracker-v2';
 
-// Installation: Dateien cachen
+// Installation
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(URLS_TO_CACHE);
-    })
-  );
   self.skipWaiting();
 });
 
-// Aktivierung: alten Cache löschen
+// Aktivierung: ALLE alten Caches löschen
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
+      return Promise.all(keys.map(key => caches.delete(key)));
     })
   );
   self.clients.claim();
 });
 
-// Fetch: Cache-First für App-Dateien, Network-First für Firebase
+// Fetch: NETWORK-FIRST für HTML (Updates kommen sofort an),
+// Cache nur als Offline-Fallback
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Firebase API-Calls immer über Netzwerk
+  // Firebase API-Calls immer direkt
   if (url.hostname.includes('firebase') || url.hostname.includes('google')) {
-    event.respondWith(fetch(event.request).catch(() => new Response('', { status: 503 })));
     return;
   }
 
-  // App-Dateien: Cache-First
+  // HTML-Dokumente: Netzwerk zuerst, Cache als Fallback
+  if (event.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Andere Dateien (Icons etc.): Cache-First ist okay
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -47,11 +49,6 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => {
-        // Offline-Fallback: index.html zurückgeben
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
-        }
       });
     })
   );
